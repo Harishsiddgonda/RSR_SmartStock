@@ -5,6 +5,8 @@
 **Technology Stack:** Python 3.10+, Flask, SQLite 3 (ACID, Atomic Transactions), Gunicorn, HTML5, CSS3, Vanilla JS, Chart.js, JsBarcode, QRCode.js, openpyxl  
 **Deployment Platforms:** Local Windows (Bat scripts), Linux, Render Cloud, Docker/Heroku  
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Harishsiddgonda/RSR_SmartStock)
+
 ---
 
 ## 🌟 Executive Overview & Premium UX
