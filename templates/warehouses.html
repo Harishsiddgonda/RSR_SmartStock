@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% block title %}Warehouses · {{ company_name }}{% endblock %}
+{% block breadcrumb %}Warehouses{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">FACILITY & LOCATION MANAGEMENT</div>
+    <h1>Warehouse Locations</h1>
+    <p>Manage physical storage facilities, distribution hubs, and track occupancy capacities.</p>
+  </div>
+  {% if current_user and current_user.role in ['admin', 'manager'] %}
+  <button class="btn btn-primary" onclick="openAddWhModal()">
+    <span>＋</span> Add Warehouse Location
+  </button>
+  {% endif %}
+</div>
+
+<!-- Add Warehouse Modal -->
+{% if current_user and current_user.role in ['admin', 'manager'] %}
+<div id="addWhModal" class="modal-backdrop" hidden>
+  <div class="modal-box modal-md">
+    <div class="modal-header">
+      <div>
+        <h3>Add New Storage Location</h3>
+        <p>Register warehouse facility code and storage volume capacity</p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeAddWhModal()">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('warehouses') }}" class="modal-body stacked-form">
+      <label>Warehouse Name *
+        <input type="text" name="name" placeholder="e.g. North Zone Distribution Center" required maxlength="100">
+      </label>
+      <label>Warehouse Code *
+        <input type="text" name="code" placeholder="e.g. WH-NZ-04" required maxlength="30" style="text-transform: uppercase;">
+      </label>
+      <label>Facility Location (City, State)
+        <input type="text" name="location" placeholder="e.g. Peenya, Bengaluru, Karnataka">
+      </label>
+      <label>Storage Unit Capacity
+        <input type="number" name="capacity" min="100" value="15000" placeholder="Max storage units">
+      </label>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeAddWhModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Warehouse →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Warehouse Modal -->
+<div id="editWhModal" class="modal-backdrop" hidden>
+  <div class="modal-box modal-md">
+    <div class="modal-header">
+      <div>
+        <h3>Edit Warehouse</h3>
+        <p>Update warehouse name, location address or capacity</p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeEditWhModal()">&times;</button>
+    </div>
+    <form method="POST" id="editWhForm" class="modal-body stacked-form">
+      <label>Warehouse Name *
+        <input type="text" name="name" id="edit_wh_name" required maxlength="100">
+      </label>
+      <label>Warehouse Code *
+        <input type="text" name="code" id="edit_wh_code" required maxlength="30" style="text-transform: uppercase;">
+      </label>
+      <label>Location
+        <input type="text" name="location" id="edit_wh_location">
+      </label>
+      <label>Unit Capacity
+        <input type="number" name="capacity" id="edit_wh_capacity" min="100" required>
+      </label>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeEditWhModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Warehouse →</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="warehouse-cards" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; margin-bottom: 24px;">
+  {% for wh in warehouses %}
+    {% set occupancy_pct = (wh.total_units / (wh.capacity or 10000) * 100)|round(1) %}
+    {% if occupancy_pct > 100 %}{% set occupancy_pct = 100 %}{% endif %}
+    <article class="warehouse-card">
+      <div class="warehouse-card-top">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="warehouse-big-icon">▥</div>
+          <div>
+            <h3 style="margin: 0; font-size: 15px;">{{ wh.name }}</h3>
+            <span class="mono" style="font-size: 10px; color: #6366f1;">{{ wh.code }}</span>
+          </div>
+        </div>
+        <span class="status-pill status-good"><i></i> Operational</span>
+      </div>
+
+      <p class="warehouse-location" style="margin-top: 10px;">⌖ {{ wh.location or 'Location not specified' }}</p>
+
+      <div style="margin-top: 14px;">
+        <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+          <span style="color: #64748b;">Capacity Utilization</span>
+          <strong style="color: #334155;">{{ occupancy_pct }}%</strong>
+        </div>
+        <div class="progress-track">
+          <span style="width: {{ occupancy_pct }}%; {% if occupancy_pct > 80 %}background: #f59e0b;{% endif %}"></span>
+        </div>
+      </div>
+
+      <div class="warehouse-metrics">
+        <div>
+          <strong>{{ '{:,}'.format(wh.total_units) }}</strong>
+          <small>Stored Units</small>
+        </div>
+        <div>
+          <strong>{{ wh.active_skus }}</strong>
+          <small>Active SKUs</small>
+        </div>
+        <div>
+          <strong>{{ '{:,}'.format(wh.capacity) }}</strong>
+          <small>Max Capacity</small>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid #f1f5f9;">
+        <a href="{{ url_for('warehouse_stock_detail', id=wh.id) }}" class="btn btn-outline btn-xs" style="font-size: 11px;">
+          📦 View Stored Inventory →
+        </a>
+        {% if current_user and current_user.role in ['admin', 'manager'] %}
+        <button type="button" class="btn btn-secondary btn-xs"
+                onclick="openEditWhModal({{ wh.id }}, '{{ wh.name|replace("'", "\\'") }}', '{{ wh.code }}', '{{ (wh.location or "")|replace("'", "\\'") }}', {{ wh.capacity or 10000 }})">
+          ✏ Edit
+        </button>
+        {% endif %}
+      </div>
+    </article>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openAddWhModal() { document.getElementById('addWhModal').hidden = false; }
+function closeAddWhModal() { document.getElementById('addWhModal').hidden = true; }
+
+function openEditWhModal(id, name, code, loc, cap) {
+  document.getElementById('editWhForm').action = '/warehouses/' + id + '/edit';
+  document.getElementById('edit_wh_name').value = name;
+  document.getElementById('edit_wh_code').value = code;
+  document.getElementById('edit_wh_location').value = loc;
+  document.getElementById('edit_wh_capacity').value = cap;
+  document.getElementById('editWhModal').hidden = false;
+}
+function closeEditWhModal() { document.getElementById('editWhModal').hidden = true; }
+</script>
+{% endblock %}

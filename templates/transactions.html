@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block title %}Movements Audit · {{ company_name }}{% endblock %}
+{% block breadcrumb %}Stock Transactions{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">AUDIT & TRANSACTION LOG</div>
+    <h1>Stock Movements & Transactions</h1>
+    <p>Complete historical ledger of all goods received, warehouse transfers, dispatches, returns, and adjustments.</p>
+  </div>
+  <div class="heading-actions">
+    <a class="btn btn-outline" href="{{ url_for('export_excel', type='movements') }}">
+      <span>📥</span> Export Movements (Excel)
+    </a>
+    <a class="btn btn-secondary" href="{{ url_for('transfer') }}">⇄ Transfer</a>
+    <a class="btn btn-primary" href="{{ url_for('grn') }}">＋ New GRN</a>
+  </div>
+</div>
+
+<section class="panel recent-panel">
+  <div class="panel-heading inventory-heading">
+    <div>
+      <h2>Transaction Ledger <span class="count-badge">{{ rows|length }}</span></h2>
+      <p>Filter by movement classification or search by reference number or product.</p>
+    </div>
+    <div class="table-tools">
+      <div class="search-box">
+        <span>⌕</span>
+        <input type="search" id="transactionSearch" placeholder="Search ref, product, or party...">
+      </div>
+      <select id="typeFilter" class="filter-select" onchange="applyFilters()">
+        <option value="">All Movement Types</option>
+        <option value="GRN" {% if selected_type == 'GRN' %}selected{% endif %}>GRN (Goods Receipt)</option>
+        <option value="TRANSFER" {% if selected_type == 'TRANSFER' %}selected{% endif %}>TRANSFER (Internal)</option>
+        <option value="DISPATCH" {% if selected_type == 'DISPATCH' %}selected{% endif %}>DISPATCH (Outbound Sales)</option>
+        <option value="RETURN_IN" {% if selected_type == 'RETURN_IN' %}selected{% endif %}>RETURN_IN (Customer)</option>
+        <option value="RETURN_OUT" {% if selected_type == 'RETURN_OUT' %}selected{% endif %}>RETURN_OUT (Supplier)</option>
+        <option value="ADJUSTMENT_ADD" {% if selected_type == 'ADJUSTMENT_ADD' %}selected{% endif %}>ADJUSTMENT (+)</option>
+        <option value="ADJUSTMENT_SUB" {% if selected_type == 'ADJUSTMENT_SUB' %}selected{% endif %}>ADJUSTMENT (-)</option>
+        <option value="OPENING" {% if selected_type == 'OPENING' %}selected{% endif %}>OPENING STOCK</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>REFERENCE #</th>
+          <th>PRODUCT</th>
+          <th>TYPE</th>
+          <th>QUANTITY</th>
+          <th>ROUTE / PARTY</th>
+          <th>UNIT PRICE</th>
+          <th>TOTAL VALUE</th>
+          <th>RECORDED BY</th>
+          <th>TIMESTAMP</th>
+          <th>REMARKS</th>
+        </tr>
+      </thead>
+      <tbody id="transactionBody">
+        {% for row in rows %}
+          <tr data-search="{{ (row.ref_no ~ ' ' ~ row.product_name ~ ' ' ~ row.sku ~ ' ' ~ row.movement_type ~ ' ' ~ (row.supplier_name or '') ~ ' ' ~ (row.customer_name or '') ~ ' ' ~ (row.recorded_by or ''))|lower }}"
+              data-type="{{ row.movement_type }}">
+            <td class="mono"><strong>{{ row.ref_no }}</strong></td>
+            <td>
+              <strong>{{ row.product_name }}</strong>
+              <small class="cell-sub">{{ row.sku }}</small>
+            </td>
+            <td>
+              <span class="type-pill {{ row.movement_type|lower }}">{{ row.movement_type }}</span>
+            </td>
+            <td class="quantity-cell">{{ row.quantity }}</td>
+            <td class="muted-cell">
+              {% if row.from_name and row.to_name %}
+                {{ row.from_name }} → {{ row.to_name }}
+              {% elif row.supplier_name %}
+                Vendor: <strong>{{ row.supplier_name }}</strong> → {{ row.to_name }}
+              {% elif row.customer_name %}
+                {{ row.from_name }} → Client: <strong>{{ row.customer_name }}</strong>
+              {% elif row.to_name %}
+                Received at {{ row.to_name }}
+              {% elif row.from_name %}
+                From {{ row.from_name }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td class="muted-cell">{{ currency_symbol }}{{ '{:,.2f}'.format(row.unit_price or 0.0) }}</td>
+            <td>
+              <strong>{{ currency_symbol }}{{ '{:,.2f}'.format(row.total_price or 0.0) }}</strong>
+            </td>
+            <td class="muted-cell">{{ row.recorded_by or 'System' }}</td>
+            <td class="muted-cell">{{ row.created_at[:16] }}</td>
+            <td class="remarks-cell" title="{{ row.remarks }}">{{ row.remarks or '—' }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="10"><div class="empty-state">No transaction records found matching criteria.</div></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="table-foot">
+    <span>Showing {{ rows|length }} movement record(s)</span>
+    <span>Immutable transaction references generated chronologically.</span>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function applyFilters() {
+  const typeVal = document.getElementById('typeFilter').value;
+  const searchVal = document.getElementById('transactionSearch').value.toLowerCase().trim();
+
+  document.querySelectorAll('#transactionBody tr[data-search]').forEach(row => {
+    const matchesSearch = row.dataset.search.includes(searchVal);
+    const matchesType = !typeVal || row.dataset.type === typeVal;
+    row.hidden = !(matchesSearch && matchesType);
+  });
+}
+
+document.getElementById('transactionSearch').addEventListener('input', applyFilters);
+</script>
+{% endblock %}

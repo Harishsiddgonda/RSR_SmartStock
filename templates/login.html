@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In · RSR SmartStock WMS</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    .auth-page {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .auth-brand-side {
+      padding: 60px 70px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.25), transparent 45%),
+                  radial-gradient(circle at 85% 80%, rgba(56, 189, 248, 0.15), transparent 50%),
+                  #0f172a;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+    .auth-brand-side::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h1v1H0z' fill='rgba(255,255,255,0.04)'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+    .auth-logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+    }
+    .auth-logo .brand-mark {
+      width: 48px;
+      height: 48px;
+      font-size: 15px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #6366f1, #4338ca);
+      box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.5);
+    }
+    .auth-logo strong {
+      font: 800 22px 'Manrope', sans-serif;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      display: block;
+    }
+    .auth-logo small {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: #94a3b8;
+      font-weight: 700;
+    }
+    .auth-hero-copy {
+      max-width: 520px;
+      margin: 40px 0;
+    }
+    .auth-hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #a5b4fc;
+      padding: 6px 14px;
+      border-radius: 30px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 24px;
+    }
+    .auth-hero-badge span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+    }
+    .auth-hero-copy h1 {
+      font: 800 38px 'Manrope', sans-serif;
+      line-height: 1.2;
+      letter-spacing: -1.2px;
+      margin: 0 0 18px;
+      color: #ffffff;
+    }
+    .auth-hero-copy p {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #94a3b8;
+      margin: 0;
+    }
+    .auth-features-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 32px;
+    }
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 14px 16px;
+      border-radius: 12px;
+    }
+    .feature-item span {
+      font-size: 18px;
+      color: #818cf8;
+      line-height: 1;
+    }
+    .feature-item strong {
+      font-size: 13px;
+      color: #f1f5f9;
+      display: block;
+      margin-bottom: 3px;
+    }
+    .feature-item small {
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.4;
+    }
+    .auth-side-foot {
+      font-size: 12px;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+    }
+    .auth-form-side {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 50px 40px;
+      background: #090d16;
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 440px;
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 38px 36px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    }
+    .auth-card-head {
+      margin-bottom: 28px;
+    }
+    .auth-card-head h2 {
+      font: 800 24px 'Manrope', sans-serif;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+      margin: 0 0 6px;
+    }
+    .auth-card-head p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin: 0;
+    }
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .auth-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .auth-input-group label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #cbd5e1;
+    }
+    .auth-input-group input {
+      height: 44px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #ffffff;
+      padding: 0 14px;
+      font-size: 13px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .auth-input-group input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+      background: #0f172a;
+    }
+    .auth-submit-btn {
+      height: 46px;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
+      transition: all 0.2s ease;
+      margin-top: 8px;
+    }
+    .auth-submit-btn:hover {
+      background: linear-gradient(135deg, #4f46e5, #4338ca);
+      transform: translateY(-1px);
+    }
+    .demo-credentials-box {
+      margin-top: 30px;
+      padding: 16px;
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px dashed rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+    }
+    .demo-credentials-box h4 {
+      margin: 0 0 10px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .demo-pills {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .demo-pill {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.15s ease;
+      color: #e2e8f0;
+      font-size: 12px;
+    }
+    .demo-pill:hover {
+      background: #334155;
+      border-color: #6366f1;
+    }
+    .demo-pill strong {
+      color: #818cf8;
+      font-weight: 700;
+    }
+    .demo-pill small {
+      color: #94a3b8;
+      font-family: monospace;
+      font-size: 11px;
+    }
+    @media (max-width: 900px) {
+      .auth-page {
+        grid-template-columns: 1fr;
+      }
+      .auth-brand-side {
+        display: none;
+      }
+      .auth-form-side {
+        padding: 30px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-brand-side">
+      <div class="auth-logo">
+        <span class="brand-mark">RSR</span>
+        <div>
+          <strong>SmartStock</strong>
+          <small>ENTERPRISE WMS</small>
+        </div>
+      </div>
+
+      <div class="auth-hero-copy">
+        <div class="auth-hero-badge">
+          <span></span> PRODUCTION READY · WMS v2.5
+        </div>
+        <h1>Total Inventory Clarity & Warehouse Control</h1>
+        <p>A full-stack, enterprise-grade inventory management system engineered for precision tracking across multi-location warehouses, barcode logistics, and financial audits.</p>
+
+        <div class="auth-features-list">
+          <div class="feature-item">
+            <span>▥</span>
+            <div>
+              <strong>Multi-Warehouse</strong>
+              <small>Real-time location stock & transfers</small>
+            </div>
+          </div>
+          <div class="feature-item">
+            <span>▦</span>
+            <div>
+              <strong>Barcode & QR</strong>
+              <small>Live scanner & label printing</small>
+            </div>
+          </div>
+          <div class="feature-item">
+            <span>↗</span>
+            <div>
+              <strong>GRN & Dispatch</strong>
+              <small>Purchase & sales cycle audit</small>
+            </div>
+          </div>
+          <div class="feature-item">
+            <span>📊</span>
+            <div>
+              <strong>Valuation Reports</strong>
+              <small>Excel & PDF inventory audits</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-side-foot">
+        <span>© {{ current_year }} RSR SmartStock</span>
+        <span>Secure Session & PBKDF2 Encryption</span>
+      </div>
+    </div>
+
+    <div class="auth-form-side">
+      <div class="auth-card">
+        <div class="auth-card-head">
+          <h2>Welcome back</h2>
+          <p>Please sign in with your credentials to continue</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-stack" style="margin-bottom: 20px;">
+              {% for category, message in messages %}
+                <div class="flash-message {{ category }}">
+                  <span>{{ '✓' if category == 'success' else '!' }}</span>
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('login') }}" class="auth-form" id="loginForm">
+          <div class="auth-input-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" value="{{ username or '' }}" placeholder="e.g. admin or manager" required autofocus autocomplete="username">
+          </div>
+
+          <div class="auth-input-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; margin: -4px 0 2px;">
+            <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #cbd5e1; cursor: pointer; user-select: none;">
+              <input type="checkbox" name="remember" value="1" checked style="width: 16px; height: 16px; accent-color: #6366f1; cursor: pointer; border-radius: 4px;">
+              Remember me on this device (30 days)
+            </label>
+          </div>
+
+          <button type="submit" class="auth-submit-btn">Sign In to Dashboard →</button>
+        </form>
+
+        <div class="demo-credentials-box">
+          <h4><span>✦</span> Click to Autofill Demo Credentials</h4>
+          <div class="demo-pills">
+            <div class="demo-pill" onclick="fillCreds('harish', 'harish123')">
+              <span><strong>Harish</strong> · Lead Developer & Admin</span>
+              <small>harish / harish123</small>
+            </div>
+            <div class="demo-pill" onclick="fillCreds('admin', 'admin123')">
+              <span><strong>Admin</strong> · System Administrator</span>
+              <small>admin / admin123</small>
+            </div>
+            <div class="demo-pill" onclick="fillCreds('manager', 'manager123')">
+              <span><strong>Manager</strong> · Operations & Reports</span>
+              <small>manager / manager123</small>
+            </div>
+            <div class="demo-pill" onclick="fillCreds('staff', 'staff123')">
+              <span><strong>Staff</strong> · Scan, GRN & Dispatch</span>
+              <small>staff / staff123</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function fillCreds(u, p) {
+      document.getElementById('username').value = u;
+      document.getElementById('password').value = p;
+      document.getElementById('username').focus();
+    }
+  </script>
+</body>
+</html>

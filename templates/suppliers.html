@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% block title %}Suppliers · {{ company_name }}{% endblock %}
+{% block breadcrumb %}Suppliers{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">VENDOR DIRECTORY</div>
+    <h1>Suppliers & Vendors</h1>
+    <p>Manage raw material & goods suppliers, purchase records, and procurement contacts.</p>
+  </div>
+  {% if current_user and current_user.role in ['admin', 'manager'] %}
+  <button class="btn btn-primary" onclick="openAddSupModal()">
+    <span>＋</span> Register Supplier
+  </button>
+  {% endif %}
+</div>
+
+<!-- Add Supplier Modal -->
+{% if current_user and current_user.role in ['admin', 'manager'] %}
+<div id="addSupModal" class="modal-backdrop" hidden>
+  <div class="modal-box modal-md">
+    <div class="modal-header">
+      <div>
+        <h3>Register New Supplier</h3>
+        <p>Enter vendor corporate information and procurement details</p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeAddSupModal()">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('suppliers') }}" class="modal-body stacked-form">
+      <label>Supplier / Company Name *
+        <input type="text" name="name" placeholder="e.g. Acme Components Ltd" required maxlength="100">
+      </label>
+      <label>Vendor Code *
+        <input type="text" name="code" placeholder="e.g. SUP-105" required maxlength="30" style="text-transform: uppercase;">
+      </label>
+      <label>Contact Person
+        <input type="text" name="contact_person" placeholder="e.g. Rajesh Sharma" maxlength="80">
+      </label>
+      <div class="form-grid two-col" style="gap: 12px;">
+        <label>Email Address
+          <input type="email" name="email" placeholder="vendor@domain.com">
+        </label>
+        <label>Phone Number
+          <input type="tel" name="phone" placeholder="+91 98765 00000">
+        </label>
+      </div>
+      <label>Office / Warehouse Address
+        <textarea name="address" rows="2" placeholder="Street, Industrial Area, City, State..."></textarea>
+      </label>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeAddSupModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Supplier →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Supplier Modal -->
+<div id="editSupModal" class="modal-backdrop" hidden>
+  <div class="modal-box modal-md">
+    <div class="modal-header">
+      <div>
+        <h3>Edit Supplier Details</h3>
+        <p>Update contact information or vendor details</p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeEditSupModal()">&times;</button>
+    </div>
+    <form method="POST" id="editSupForm" class="modal-body stacked-form">
+      <label>Supplier / Company Name *
+        <input type="text" name="name" id="edit_sup_name" required maxlength="100">
+      </label>
+      <label>Vendor Code *
+        <input type="text" name="code" id="edit_sup_code" required maxlength="30" style="text-transform: uppercase;">
+      </label>
+      <label>Contact Person
+        <input type="text" name="contact_person" id="edit_sup_person">
+      </label>
+      <div class="form-grid two-col" style="gap: 12px;">
+        <label>Email Address
+          <input type="email" name="email" id="edit_sup_email">
+        </label>
+        <label>Phone Number
+          <input type="tel" name="phone" id="edit_sup_phone">
+        </label>
+      </div>
+      <label>Office / Warehouse Address
+        <textarea name="address" id="edit_sup_address" rows="2"></textarea>
+      </label>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeEditSupModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Supplier →</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Registered Suppliers <span class="count-badge">{{ suppliers|length }}</span></h2>
+      <p>Vendor contacts, address details, and procurement statistics.</p>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>CODE</th>
+          <th>SUPPLIER NAME</th>
+          <th>CONTACT PERSON</th>
+          <th>EMAIL / PHONE</th>
+          <th>ADDRESS</th>
+          <th>RECEIPTS (GRN)</th>
+          <th>TOTAL PROCUREMENT</th>
+          {% if current_user and current_user.role in ['admin', 'manager'] %}
+          <th>ACTIONS</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for sup in suppliers %}
+          <tr>
+            <td class="mono"><strong>{{ sup.code }}</strong></td>
+            <td><strong>{{ sup.name }}</strong></td>
+            <td>{{ sup.contact_person or '—' }}</td>
+            <td>
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                {% if sup.email %}<a href="mailto:{{ sup.email }}" class="text-link" style="font-size: 10px;">{{ sup.email }}</a>{% endif %}
+                <small class="muted-cell">{{ sup.phone or '—' }}</small>
+              </div>
+            </td>
+            <td class="muted-cell" style="max-width: 200px; white-space: normal; font-size: 10px;">{{ sup.address or '—' }}</td>
+            <td>
+              <span class="type-pill grn">{{ sup.grn_count }} receipt(s)</span>
+            </td>
+            <td>
+              <strong>{{ currency_symbol }}{{ '{:,.2f}'.format(sup.total_purchased) }}</strong>
+            </td>
+            {% if current_user and current_user.role in ['admin', 'manager'] %}
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn btn-secondary btn-xs"
+                        onclick="openEditSupModal({{ sup.id }}, '{{ sup.name|replace("'", "\\'") }}', '{{ sup.code }}', '{{ (sup.contact_person or "")|replace("'", "\\'") }}', '{{ sup.email or "" }}', '{{ sup.phone or "" }}', '{{ (sup.address or "")|replace("'", "\\'") }}')">
+                  ✏ Edit
+                </button>
+                {% if current_user.role == 'admin' %}
+                <form method="POST" action="{{ url_for('delete_supplier', id=sup.id) }}" style="display: inline;" onsubmit="return confirm('Delete supplier \'{{ sup.name }}\'?');">
+                  <button type="submit" class="btn btn-danger btn-xs" title="Delete supplier">✕</button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8"><div class="empty-state">No suppliers registered yet.</div></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openAddSupModal() { document.getElementById('addSupModal').hidden = false; }
+function closeAddSupModal() { document.getElementById('addSupModal').hidden = true; }
+
+function openEditSupModal(id, name, code, person, email, phone, addr) {
+  document.getElementById('editSupForm').action = '/suppliers/' + id + '/edit';
+  document.getElementById('edit_sup_name').value = name;
+  document.getElementById('edit_sup_code').value = code;
+  document.getElementById('edit_sup_person').value = person;
+  document.getElementById('edit_sup_email').value = email;
+  document.getElementById('edit_sup_phone').value = phone;
+  document.getElementById('edit_sup_address').value = addr;
+  document.getElementById('editSupModal').hidden = false;
+}
+function closeEditSupModal() { document.getElementById('editSupModal').hidden = true; }
+</script>
+{% endblock %}

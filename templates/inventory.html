@@ -1,0 +1,462 @@
+{% extends 'base.html' %}
+{% block title %}Products & Inventory · {{ company_name }}{% endblock %}
+{% block breadcrumb %}Products & Inventory{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">PRODUCT & ASSET CATALOGUE</div>
+    <h1>Products & Inventory</h1>
+    <p>Manage product master data, pricing, barcodes, QR tags, and warehouse stock distribution.</p>
+  </div>
+  <div class="heading-actions">
+    <a class="btn btn-outline" href="{{ url_for('report_dashboard', tab='valuation') }}">
+      <span>📊</span> Valuation Report
+    </a>
+    {% if current_user and current_user.role in ['admin', 'manager'] %}
+    <button class="btn btn-primary" onclick="openAddModal()">
+      <span>＋</span> Add New Product
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Add Product Modal -->
+{% if current_user and current_user.role in ['admin', 'manager'] %}
+<div id="addProductModal" class="modal-backdrop" hidden>
+  <div class="modal-box modal-lg">
+    <div class="modal-header">
+      <div>
+        <h3>Create New Product Master</h3>
+        <p>Register SKU, barcode, category, valuation pricing, and optional opening stock.</p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeAddModal()">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('inventory') }}" class="modal-body form-grid">
+      <label class="col-span-2">Product Name *
+        <input type="text" name="name" placeholder="e.g. Wireless Ergonomic Mouse" required maxlength="100">
+      </label>
+      <label>SKU (Stock Keeping Unit) *
+        <input type="text" name="sku" placeholder="e.g. RSR-1009" required maxlength="40" style="text-transform: uppercase;">
+      </label>
+      <label>Barcode / GTIN
+        <input type="text" name="barcode" placeholder="Leave empty to use SKU" maxlength="80">
+      </label>
+      <label>Category
+        <select name="category_id">
+          <option value="">General (Uncategorized)</option>
+          {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Unit of Measurement
+        <select name="unit">
+          <option value="pcs">Pieces (pcs)</option>
+          <option value="box">Box (box)</option>
+          <option value="pack">Pack (pack)</option>
+          <option value="ream">Ream (ream)</option>
+          <option value="kg">Kilogram (kg)</option>
+          <option value="litre">Litre (L)</option>
+          <option value="meter">Meter (m)</option>
+          <option value="set">Set (set)</option>
+        </select>
+      </label>
+      <label>Cost Price ({{ currency_symbol }}) *
+        <input type="number" step="0.01" min="0" name="cost_price" placeholder="Purchase cost" value="0.00" required>
+      </label>
+      <label>Selling Price ({{ currency_symbol }}) *
+        <input type="number" step="0.01" min="0" name="selling_price" placeholder="Retail price" value="0.00" required>
+      </label>
+      <label>Reorder Threshold *
+        <input type="number" min="0" name="reorder_level" value="10" required>
+      </label>
+      <label>Opening Stock Quantity
+        <input type="number" min="0" name="opening_qty" value="0">
+      </label>
+      <label class="col-span-2">Opening Stock Warehouse
+        <select name="warehouse_id">
+          {% for wh in warehouses %}
+            <option value="{{ wh.id }}">{{ wh.name }} ({{ wh.location }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="col-span-4">Product Description & Specs
+        <textarea name="description" rows="2" placeholder="Optional specifications, brand, model, or notes..."></textarea>
+      </label>
+      <div class="modal-footer col-span-4">
+        <button type="button" class="btn btn-outline" onclick="closeAddModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Product Master →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Product Modal -->
+<div id="editProductModal" class="modal-backdrop" hidden>
+  <div class="modal-box modal-lg">
+    <div class="modal-header">
+      <div>
+        <h3>Edit Product Master</h3>
+        <p>Update product specifications, prices, or reorder levels.</p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeEditModal()">&times;</button>
+    </div>
+    <form method="POST" id="editProductForm" class="modal-body form-grid">
+      <label class="col-span-2">Product Name *
+        <input type="text" name="name" id="edit_name" required maxlength="100">
+      </label>
+      <label>SKU *
+        <input type="text" name="sku" id="edit_sku" required maxlength="40" style="text-transform: uppercase;">
+      </label>
+      <label>Barcode / GTIN
+        <input type="text" name="barcode" id="edit_barcode" maxlength="80">
+      </label>
+      <label>Category
+        <select name="category_id" id="edit_category_id">
+          <option value="">General</option>
+          {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Unit
+        <select name="unit" id="edit_unit">
+          <option value="pcs">Pieces (pcs)</option>
+          <option value="box">Box (box)</option>
+          <option value="pack">Pack (pack)</option>
+          <option value="ream">Ream (ream)</option>
+          <option value="kg">Kilogram (kg)</option>
+          <option value="litre">Litre (L)</option>
+          <option value="meter">Meter (m)</option>
+          <option value="set">Set (set)</option>
+        </select>
+      </label>
+      <label>Cost Price ({{ currency_symbol }}) *
+        <input type="number" step="0.01" min="0" name="cost_price" id="edit_cost_price" required>
+      </label>
+      <label>Selling Price ({{ currency_symbol }}) *
+        <input type="number" step="0.01" min="0" name="selling_price" id="edit_selling_price" required>
+      </label>
+      <label class="col-span-2">Reorder Threshold *
+        <input type="number" min="0" name="reorder_level" id="edit_reorder_level" required>
+      </label>
+      <label class="col-span-4">Product Description
+        <textarea name="description" id="edit_description" rows="2"></textarea>
+      </label>
+      <div class="modal-footer col-span-4">
+        <button type="button" class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Product →</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<!-- Printable Barcode Tag Modal -->
+<div id="printTagModal" class="modal-backdrop" hidden>
+  <div class="modal-box modal-md">
+    <div class="modal-header">
+      <div>
+        <h3>Product Barcode & QR Label Tag</h3>
+        <p>Ready for thermal barcode printing or standard laser label sheets</p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeTagModal()">&times;</button>
+    </div>
+    <div class="modal-body" style="text-align: center; padding: 25px;">
+      <div class="printable-tag" id="printableTagArea" style="border: 2px dashed #cbd5e1; padding: 20px; border-radius: 12px; background: #fff; max-width: 320px; margin: 0 auto;">
+        <h4 id="tagProductName" style="margin: 0 0 5px; font-size: 14px; font-weight: 800; color: #1e293b;"></h4>
+        <div style="font-size: 11px; color: #64748b; margin-bottom: 12px;">
+          SKU: <strong id="tagSku" style="color: #3b82f6;"></strong> · Unit: <span id="tagUnit"></span>
+        </div>
+        <div style="margin: 10px 0;">
+          <svg id="tagBarcodeSvg"></svg>
+        </div>
+        <div style="display: flex; justify-content: center; margin: 12px 0;">
+          <div id="tagQrCode"></div>
+        </div>
+        <div style="font-size: 12px; font-weight: 700; color: #0f172a; margin-top: 8px;">
+          MRP: {{ currency_symbol }}<span id="tagPrice"></span>
+        </div>
+        <div style="font-size: 9px; color: #94a3b8; margin-top: 4px;">{{ company_name }}</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline" onclick="closeTagModal()">Close</button>
+      <button type="button" class="btn btn-primary" onclick="window.print()">
+        <span>🖨</span> Print Label
+      </button>
+    </div>
+  </div>
+</div>
+
+<section class="panel inventory-panel">
+  <div class="panel-heading inventory-heading">
+    <div>
+      <h2>
+        All Products Catalogue 
+        <span class="count-badge">{{ rows|length }}</span>
+      </h2>
+      <p>Comprehensive catalogue with real-time stock balances across warehouses.</p>
+    </div>
+    <div class="table-tools">
+      <div class="search-box">
+        <span>⌕</span>
+        <input type="search" id="inventorySearch" placeholder="Filter by name, SKU, or code..." value="{{ search_query }}">
+      </div>
+      <select id="categoryFilter" class="filter-select" onchange="filterByCategory(this.value)">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if selected_category == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+      <select id="stockFilter" class="filter-select">
+        <option value="all">All Stock Status</option>
+        <option value="low">Low Stock</option>
+        <option value="out">Out of Stock</option>
+        <option value="healthy">In Stock</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table inventory-table">
+      <thead>
+        <tr>
+          <th>PRODUCT</th>
+          <th>SKU / BARCODE</th>
+          <th>CATEGORY</th>
+          <th>WAREHOUSE BREAKDOWN</th>
+          <th>TOTAL STOCK</th>
+          <th>UNIT COST</th>
+          <th>RETAIL PRICE</th>
+          <th>ASSET VALUE</th>
+          <th>STATUS</th>
+          {% if current_user and current_user.role in ['admin', 'manager'] %}
+          <th>ACTIONS</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody id="inventoryBody">
+        {% for row in rows %}
+          <tr data-search="{{ (row.name ~ ' ' ~ row.sku ~ ' ' ~ row.barcode ~ ' ' ~ (row.category_name or row.category))|lower }}" 
+              data-status="{% if row.total_stock == 0 %}out{% elif row.total_stock <= row.reorder_level %}low{% else %}healthy{% endif %}">
+            <td>
+              <div class="product-name-cell">
+                <div class="product-avatar">{{ row.name[:1]|upper }}</div>
+                <div>
+                  <strong>{{ row.name }}</strong>
+                  <small>{{ row.unit }} {% if row.description %}· {{ row.description[:35] }}{% if row.description|length > 35 %}...{% endif %}{% endif %}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="mono sku-value">{{ row.sku }}</span>
+              <small class="cell-sub">{{ row.barcode }}</small>
+            </td>
+            <td class="muted-cell">
+              <span class="category-badge">{{ row.category_name or row.category }}</span>
+            </td>
+            <td>
+              <div class="stock-location-list">
+                {% for level in row.levels %}
+                  <span>{{ level.name }}: <b>{{ level.quantity }}</b></span>
+                {% endfor %}
+              </div>
+            </td>
+            <td class="quantity-cell">
+              {{ row.total_stock }}
+              <small style="display: block; font-size: 9px; color: #94a3b8; font-weight: 500;">
+                Min: {{ row.reorder_level }}
+              </small>
+            </td>
+            <td class="muted-cell">{{ currency_symbol }}{{ '{:,.2f}'.format(row.cost_price) }}</td>
+            <td class="muted-cell">{{ currency_symbol }}{{ '{:,.2f}'.format(row.selling_price) }}</td>
+            <td>
+              <strong>{{ currency_symbol }}{{ '{:,.2f}'.format(row.cost_valuation) }}</strong>
+            </td>
+            <td>
+              <span class="status-pill {{ row.status_class }}">
+                <i></i> {{ row.status }}
+              </span>
+            </td>
+            {% if current_user and current_user.role in ['admin', 'manager'] %}
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn btn-outline btn-xs" 
+                        onclick="showTagModal('{{ row.name }}', '{{ row.sku }}', '{{ row.barcode }}', '{{ row.unit }}', '{{ row.selling_price }}')"
+                        title="Print Barcode & QR Label">
+                  🏷 Label
+                </button>
+                <button type="button" class="btn btn-secondary btn-xs" 
+                        onclick="openEditModal({{ row|tojson|forceescape }})" 
+                        title="Edit product details">
+                  ✏ Edit
+                </button>
+                {% if current_user.role == 'admin' %}
+                <form method="POST" action="{{ url_for('delete_product', id=row.id) }}" style="display: inline;" onsubmit="return confirm('Deactivate product \'{{ row.name }}\'? Historical transactions will remain preserved.');">
+                  <button type="submit" class="btn btn-danger btn-xs" title="Deactivate product">✕</button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+          <!-- Expandable Barcode Row -->
+          <tr class="code-preview-row" 
+              data-search="{{ (row.name ~ ' ' ~ row.sku ~ ' ' ~ row.barcode ~ ' ' ~ (row.category_name or row.category))|lower }}" 
+              data-status="{% if row.total_stock == 0 %}out{% elif row.total_stock <= row.reorder_level %}low{% else %}healthy{% endif %}">
+            <td colspan="{% if current_user and current_user.role in ['admin', 'manager'] %}10{% else %}9{% endif %}">
+              <details class="code-details">
+                <summary>View Barcode & QR Code <span>⌄</span></summary>
+                <div class="code-labels">
+                  <div>
+                    <small>BARCODE · CODE-128 ({{ row.barcode }})</small>
+                    <svg class="barcode" data-code="{{ row.barcode }}"></svg>
+                  </div>
+                  <div>
+                    <small>QR CODE · SKU ({{ row.sku }})</small>
+                    <div class="qr-code" data-code="{{ row.sku }}"></div>
+                  </div>
+                </div>
+              </details>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="10">
+              <div class="empty-state">No products found matching your search or filters.</div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="table-foot">
+    <span>Showing {{ rows|length }} product item(s)</span>
+    <span>Live calculation from connected SQLite inventory database.</span>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Render inline barcodes
+  document.querySelectorAll('.barcode').forEach(el => {
+    try {
+      JsBarcode(el, el.dataset.code, {
+        format: 'CODE128',
+        width: 1.5,
+        height: 38,
+        displayValue: true,
+        fontSize: 10,
+        margin: 2
+      });
+    } catch (e) {
+      el.outerHTML = '<small>Barcode preview unavailable</small>';
+    }
+  });
+
+  // Render inline QR codes
+  document.querySelectorAll('.qr-code').forEach(el => {
+    if (window.QRCode) {
+      new QRCode(el, {
+        text: el.dataset.code,
+        width: 64,
+        height: 64,
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+  });
+
+  // Client-side search and status filter
+  const search = document.getElementById('inventorySearch');
+  const filter = document.getElementById('stockFilter');
+
+  function applyFilters() {
+    const term = search.value.toLowerCase().trim();
+    const statusVal = filter.value;
+    document.querySelectorAll('#inventoryBody tr[data-search]').forEach(row => {
+      const matchesText = row.dataset.search.includes(term);
+      const matchesStatus = (statusVal === 'all') || (row.dataset.status === statusVal);
+      row.hidden = !(matchesText && matchesStatus);
+    });
+  }
+
+  if (search) search.addEventListener('input', applyFilters);
+  if (filter) filter.addEventListener('change', applyFilters);
+});
+
+function filterByCategory(catId) {
+  const url = new URL(window.location.href);
+  if (catId) {
+    url.searchParams.set('category', catId);
+  } else {
+    url.searchParams.delete('category');
+  }
+  window.location.href = url.toString();
+}
+
+function openAddModal() {
+  document.getElementById('addProductModal').hidden = false;
+}
+function closeAddModal() {
+  document.getElementById('addProductModal').hidden = true;
+}
+
+function openEditModal(prod) {
+  document.getElementById('editProductForm').action = '/products/' + prod.id + '/edit';
+  document.getElementById('edit_name').value = prod.name;
+  document.getElementById('edit_sku').value = prod.sku;
+  document.getElementById('edit_barcode').value = prod.barcode;
+  document.getElementById('edit_category_id').value = prod.category_id || '';
+  document.getElementById('edit_unit').value = prod.unit || 'pcs';
+  document.getElementById('edit_cost_price').value = prod.cost_price;
+  document.getElementById('edit_selling_price').value = prod.selling_price;
+  document.getElementById('edit_reorder_level').value = prod.reorder_level;
+  document.getElementById('edit_description').value = prod.description || '';
+  document.getElementById('editProductModal').hidden = false;
+}
+function closeEditModal() {
+  document.getElementById('editProductModal').hidden = true;
+}
+
+function showTagModal(name, sku, barcode, unit, price) {
+  document.getElementById('tagProductName').innerText = name;
+  document.getElementById('tagSku').innerText = sku;
+  document.getElementById('tagUnit').innerText = unit;
+  document.getElementById('tagPrice').innerText = parseFloat(price).toFixed(2);
+
+  // Generate tag barcode
+  try {
+    JsBarcode("#tagBarcodeSvg", barcode || sku, {
+      format: "CODE128",
+      width: 1.8,
+      height: 48,
+      displayValue: true,
+      fontSize: 12
+    });
+  } catch(e) {}
+
+  // Generate tag QR
+  const qrContainer = document.getElementById('tagQrCode');
+  qrContainer.innerHTML = '';
+  if (window.QRCode) {
+    new QRCode(qrContainer, {
+      text: sku,
+      width: 90,
+      height: 90,
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+
+  document.getElementById('printTagModal').hidden = false;
+}
+function closeTagModal() {
+  document.getElementById('printTagModal').hidden = true;
+}
+</script>
+{% endblock %}

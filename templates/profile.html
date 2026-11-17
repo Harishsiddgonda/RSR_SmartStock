@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}My Profile · {{ company_name }}{% endblock %}
+{% block breadcrumb %}My Profile{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">USER ACCOUNT CREDENTIALS</div>
+    <h1>Personal Profile & Security</h1>
+    <p>Update personal operator details and change password</p>
+  </div>
+</div>
+
+<div class="operation-layout">
+  <section class="panel operation-panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Account Settings</h2>
+        <p>Edit your name, contact email, and security password</p>
+      </div>
+      <span class="role-badge role-{{ current_user.role }}">{{ current_user.role|upper }}</span>
+    </div>
+
+    <form method="POST" action="{{ url_for('profile') }}" class="operation-form">
+      <div class="form-section-label">OPERATOR IDENTIFIERS</div>
+      <div class="form-grid two-col" style="gap: 14px;">
+        <label>Username
+          <input type="text" value="{{ current_user.username }}" disabled style="background: #f1f5f9; cursor: not-allowed;">
+        </label>
+        <label>System Role
+          <input type="text" value="{{ current_user.role|upper }}" disabled style="background: #f1f5f9; cursor: not-allowed;">
+        </label>
+      </div>
+
+      <div class="form-grid two-col" style="gap: 14px;">
+        <label>Full Name *
+          <input type="text" name="full_name" value="{{ current_user.full_name }}" required>
+        </label>
+        <label>Email Address
+          <input type="email" name="email" value="{{ current_user.email }}">
+        </label>
+      </div>
+
+      <div class="form-section-label section-spaced">PASSWORD CHANGE (OPTIONAL)</div>
+      <label>Current Password (leave blank if keeping existing password)
+        <input type="password" name="old_password" placeholder="••••••••">
+      </label>
+      <div class="form-grid two-col" style="gap: 14px;">
+        <label>New Password
+          <input type="password" name="new_password" placeholder="At least 6 characters" minlength="6">
+        </label>
+        <label>Confirm New Password
+          <input type="password" name="confirm_password" placeholder="Repeat new password" minlength="6">
+        </label>
+      </div>
+
+      <div class="form-actions operation-actions">
+        <button class="btn btn-primary" type="submit">Update Profile →</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="operation-aside">
+    <div class="panel process-card">
+      <div class="process-icon">🛡</div>
+      <h3>Account Security</h3>
+      <p>Passwords are stored using industry-standard Werkzeug PBKDF2:SHA256 password hashing. Passwords are never stored in plaintext.</p>
+    </div>
+  </aside>
+</div>
+{% endblock %}

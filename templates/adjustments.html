@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% block title %}Stock Adjustments · {{ company_name }}{% endblock %}
+{% block breadcrumb %}Stock Adjustments{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">AUDIT & INVENTORY RECONCILIATION</div>
+    <h1>Stock Adjustments</h1>
+    <p>Perform manual stock corrections following physical cycle counts, write-offs, or damaged goods reporting.</p>
+  </div>
+  <a class="btn btn-outline" href="{{ url_for('transactions') }}">
+    <span>◷</span> Movements Audit
+  </a>
+</div>
+
+<div class="operation-layout">
+  <section class="panel operation-panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Reconciliation Entry</h2>
+        <p>Adjust stock positive (+) or negative (-) with mandatory reason category</p>
+      </div>
+      <span class="form-step">AUDIT</span>
+    </div>
+
+    <form method="POST" action="{{ url_for('adjustments') }}" class="operation-form">
+      <div class="form-section-label">ADJUSTMENT ACTION</div>
+      <div style="display: flex; gap: 20px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <label style="flex-direction: row; align-items: center; gap: 8px; font-weight: 700; cursor: pointer;">
+          <input type="radio" name="adj_type" value="ADD" checked>
+          <span>＋ Increase Stock (Physical Count Surplus / Found Stock)</span>
+        </label>
+        <label style="flex-direction: row; align-items: center; gap: 8px; font-weight: 700; cursor: pointer;">
+          <input type="radio" name="adj_type" value="SUB">
+          <span>− Decrease Stock (Damaged / Broken / Discrepancy / Write-off)</span>
+        </label>
+      </div>
+
+      <div class="form-section-label section-spaced">PRODUCT & WAREHOUSE</div>
+      <label>Product *
+        <select name="product_id" required>
+          <option value="">-- Choose Product --</option>
+          {% for p in products %}
+            <option value="{{ p.id }}">{{ p.name }} (SKU: {{ p.sku }})</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>Warehouse *
+        <select name="warehouse_id" required>
+          <option value="">-- Select Warehouse --</option>
+          {% for wh in warehouses %}
+            <option value="{{ wh.id }}">{{ wh.name }} ({{ wh.location }})</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <div class="form-section-label section-spaced">QUANTITY & REASON</div>
+      <div class="form-grid two-col" style="gap: 14px;">
+        <label>Adjustment Units *
+          <input type="number" name="quantity" min="1" step="1" required placeholder="Quantity to adjust">
+        </label>
+        <label>Reason Category *
+          <select name="reason_category">
+            <option value="Physical Cycle Count Correction">Physical Cycle Count Correction</option>
+            <option value="Warehouse Handling Damage">Warehouse Handling Damage</option>
+            <option value="Expired / Obsolete Stock">Expired / Obsolete Stock</option>
+            <option value="Unrecorded Opening Stock">Unrecorded Opening Stock</option>
+            <option value="Theft or Unaccounted Shrinkage">Theft or Unaccounted Shrinkage</option>
+          </select>
+        </label>
+      </div>
+
+      <label>Audit Notes / Discrepancy Explanation *
+        <textarea name="notes" rows="2" placeholder="Explain the root cause of discrepancy, count date, or audit team approval..." required></textarea>
+      </label>
+
+      <div class="form-actions operation-actions">
+        <button class="btn btn-primary" type="submit">⚖ Apply Adjustment to Stock</button>
+        <a class="btn btn-outline" href="{{ url_for('dashboard') }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+
+  <aside class="operation-aside">
+    <div class="panel process-card">
+      <div class="process-icon">⚖</div>
+      <h3>Audit & Compliance</h3>
+      <p>All stock adjustments create an immutable ledger entry in the movements table and an entry in the system activity log.</p>
+      <div class="process-divider"></div>
+      <div class="process-rule">
+        <span>✓</span>
+        <div><strong>Reconciliation Safety</strong><small>Prevents manual tampering by logging current user identity.</small></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- History Table -->
+<section class="panel" style="margin-top: 24px;">
+  <div class="panel-heading">
+    <div>
+      <h2>Adjustment Audit Trail <span class="count-badge">{{ history|length }}</span></h2>
+      <p>Historical stock corrections</p>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>REFERENCE</th>
+          <th>TYPE</th>
+          <th>PRODUCT</th>
+          <th>QUANTITY</th>
+          <th>WAREHOUSE</th>
+          <th>REASON & AUDIT NOTES</th>
+          <th>RECORDED BY</th>
+          <th>DATE</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in history %}
+          <tr>
+            <td class="mono"><strong>{{ a.ref_no }}</strong></td>
+            <td>
+              <span class="type-pill {% if a.movement_type == 'ADJUSTMENT_ADD' %}grn{% else %}dispatch{% endif %}">
+                {{ '+ ' if a.movement_type == 'ADJUSTMENT_ADD' else '- ' }}{{ a.movement_type }}
+              </span>
+            </td>
+            <td>
+              <strong>{{ a.product_name }}</strong>
+              <small class="cell-sub">{{ a.sku }}</small>
+            </td>
+            <td class="quantity-cell">{{ a.quantity }}</td>
+            <td class="muted-cell">{{ a.warehouse_name or '—' }}</td>
+            <td class="remarks-cell">{{ a.remarks }}</td>
+            <td class="muted-cell">{{ a.recorded_by or 'System' }}</td>
+            <td class="muted-cell">{{ a.created_at[:16] }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8"><div class="empty-state">No stock adjustments recorded yet.</div></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

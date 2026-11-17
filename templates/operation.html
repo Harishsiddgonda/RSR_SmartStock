@@ -1,0 +1,341 @@
+{% extends 'base.html' %}
+{% if mode == 'grn' %}
+  {% set page_title = 'Goods Received Note (GRN)' %}
+  {% set page_hint = 'Record incoming goods from suppliers and increase warehouse stock.' %}
+  {% set action_label = 'Receive Goods into Warehouse' %}
+  {% set action_icon = '＋' %}
+  {% set heading_eyebrow = 'INBOUND INVENTORY · PROCUREMENT' %}
+{% elif mode == 'transfer' %}
+  {% set page_title = 'Stock Transfer' %}
+  {% set page_hint = 'Safely transfer inventory between internal warehouse locations.' %}
+  {% set action_label = 'Complete Stock Transfer' %}
+  {% set action_icon = '⇄' %}
+  {% set heading_eyebrow = 'INTERNAL LOGISTICS · REBALANCING' %}
+{% else %}
+  {% set page_title = 'Goods Dispatch & Sales' %}
+  {% set page_hint = 'Record outbound product dispatch to customer accounts.' %}
+  {% set action_label = 'Record Outbound Dispatch' %}
+  {% set action_icon = '↗' %}
+  {% set heading_eyebrow = 'OUTBOUND LOGISTICS · FULFILLMENT' %}
+{% endif %}
+
+{% block title %}{{ page_title }} · {{ company_name }}{% endblock %}
+{% block breadcrumb %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">{{ heading_eyebrow }}</div>
+    <h1>{{ page_title }}</h1>
+    <p>{{ page_hint }}</p>
+  </div>
+  <a class="btn btn-outline" href="{{ url_for('transactions') }}">
+    <span>◷</span> View Audit Trail
+  </a>
+</div>
+
+<div class="operation-layout">
+  <section class="panel operation-panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Transaction Details</h2>
+        <p>Complete product, location, and financial parameters below</p>
+      </div>
+      <span class="form-step">{{ mode|upper }}</span>
+    </div>
+
+    <form method="POST" class="operation-form" id="operationForm">
+      <!-- 1. Barcode / QR Scanner & Lookup -->
+      <div class="scan-lookup-box">
+        <div class="scan-lookup-title">
+          <span>▦</span>
+          <div>
+            <strong>Barcode / QR Code Fast Lookup</strong>
+            <small>Scan product label or type SKU/barcode to auto-select</small>
+          </div>
+        </div>
+        <div class="scan-row">
+          <input type="text" id="scanCode" placeholder="Scan or enter code (e.g. RSR-1001)...">
+          <button type="button" class="btn btn-secondary" id="findProductBtn">Find Product</button>
+          <button type="button" class="btn btn-dark" id="openScannerBtn">📷 Camera Scanner</button>
+        </div>
+        <div id="reader" class="scanner-reader" hidden></div>
+        <div id="lookupMessage" class="lookup-message" aria-live="polite"></div>
+      </div>
+
+      <!-- 2. Product Selection -->
+      <div class="form-section-label">PRODUCT SELECTION</div>
+      <label>Product Master *
+        <select name="product_id" id="productSelect" required onchange="onProductChange()">
+          <option value="">-- Choose Product --</option>
+          {% for product in products %}
+            <option value="{{ product.id }}" 
+                    data-sku="{{ product.sku }}" 
+                    data-barcode="{{ product.barcode }}"
+                    data-cost="{{ product.cost_price }}"
+                    data-selling="{{ product.selling_price }}"
+                    data-unit="{{ product.unit }}">
+              {{ product.name }} (SKU: {{ product.sku }})
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <!-- 3. Party & Route -->
+      <div class="form-section-label section-spaced">
+        {% if mode == 'grn' %}
+          VENDOR & RECEIVING LOCATION
+        {% elif mode == 'transfer' %}
+          TRANSFER ROUTE
+        {% else %}
+          CUSTOMER & DISPATCH LOCATION
+        {% endif %}
+      </div>
+
+      {% if mode == 'grn' %}
+        <div class="form-grid two-col" style="gap: 14px;">
+          <label>Supplier / Vendor
+            <select name="supplier_id">
+              <option value="">-- Select Supplier (Optional) --</option>
+              {% for sup in suppliers %}
+                <option value="{{ sup.id }}">{{ sup.name }} ({{ sup.code }})</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Purchase Order # (PO Ref)
+            <input type="text" name="po_ref" placeholder="e.g. PO-2026-9041">
+          </label>
+        </div>
+        <label>Destination Warehouse *
+          <select name="warehouse_id" id="warehouseSelect" required onchange="checkAvailability()">
+            <option value="">-- Select Receiving Warehouse --</option>
+            {% for wh in warehouses %}
+              <option value="{{ wh.id }}">{{ wh.name }} ({{ wh.location }})</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% elif mode == 'transfer' %}
+        <div class="form-grid two-col" style="gap: 14px;">
+          <label>Source Warehouse (From) *
+            <select name="from_warehouse_id" id="fromWarehouse" required onchange="checkAvailability()">
+              <option value="">-- Select Source Warehouse --</option>
+              {% for wh in warehouses %}
+                <option value="{{ wh.id }}">{{ wh.name }} ({{ wh.location }})</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Destination Warehouse (To) *
+            <select name="to_warehouse_id" id="toWarehouse" required>
+              <option value="">-- Select Destination Warehouse --</option>
+              {% for wh in warehouses %}
+                <option value="{{ wh.id }}">{{ wh.name }} ({{ wh.location }})</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+      {% else %}
+        <!-- Dispatch -->
+        <div class="form-grid two-col" style="gap: 14px;">
+          <label>Customer / Enterprise Account
+            <select name="customer_id">
+              <option value="">-- Select Customer (Optional) --</option>
+              {% for cust in customers %}
+                <option value="{{ cust.id }}">{{ cust.name }} ({{ cust.code }})</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Dispatch Invoice / Order Ref
+            <input type="text" name="invoice_ref" placeholder="e.g. INV-2026-8802">
+          </label>
+        </div>
+        <label>Source Warehouse (Dispatch From) *
+          <select name="warehouse_id" id="warehouseSelect" required onchange="checkAvailability()">
+            <option value="">-- Select Source Warehouse --</option>
+            {% for wh in warehouses %}
+              <option value="{{ wh.id }}">{{ wh.name }} ({{ wh.location }})</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% endif %}
+
+      <!-- Real-Time Stock Availability Banner -->
+      <div class="stock-availability" id="stockAvailability">
+        <span class="availability-dot" id="availDot"></span>
+        <span id="availText">Select a product and warehouse to check live inventory balance.</span>
+      </div>
+
+      <!-- 4. Quantity & Financial Valuation -->
+      <div class="form-section-label section-spaced">QUANTITY & FINANCIAL VALUATION</div>
+      <div class="form-grid two-col" style="gap: 14px;">
+        <label>Quantity *
+          <input type="number" name="quantity" id="opQuantity" min="1" step="1" placeholder="Enter quantity" required oninput="calcTotal()">
+        </label>
+        {% if mode == 'grn' %}
+        <label>Unit Purchase Cost ({{ currency_symbol }}) *
+          <input type="number" step="0.01" min="0" name="unit_price" id="opUnitPrice" placeholder="0.00" oninput="calcTotal()">
+        </label>
+        {% elif mode == 'dispatch' %}
+        <label>Unit Selling Price ({{ currency_symbol }}) *
+          <input type="number" step="0.01" min="0" name="unit_price" id="opUnitPrice" placeholder="0.00" oninput="calcTotal()">
+        </label>
+        {% endif %}
+      </div>
+
+      {% if mode in ['grn', 'dispatch'] %}
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="color: #64748b;">Estimated Transaction Value:</span>
+        <strong style="font-size: 14px; color: #0f172a;" id="calcTotalDisplay">{{ currency_symbol }}0.00</strong>
+      </div>
+      {% endif %}
+
+      <label>Remarks / Notes
+        <textarea name="remarks" rows="2" placeholder="Optional comments, delivery truck number, driver notes, or reason..."></textarea>
+      </label>
+
+      <div class="form-actions operation-actions">
+        <button class="btn btn-primary" type="submit" id="submitBtn">
+          {{ action_icon }} {{ action_label }}
+        </button>
+        <a class="btn btn-outline" href="{{ url_for('dashboard') }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+
+  <!-- Side Guidance & Process Verification Card -->
+  <aside class="operation-aside">
+    <div class="panel process-card">
+      <div class="process-icon {{ mode }}">{{ action_icon }}</div>
+      <h3>
+        {% if mode == 'grn' %}
+          Receive & Increase Stock
+        {% elif mode == 'transfer' %}
+          Transfer Between Warehouses
+        {% else %}
+          Deduct & Dispatch Stock
+        {% endif %}
+      </h3>
+      <p>
+        {% if mode == 'grn' %}
+          Inbound stock increases physical inventory in the destination warehouse immediately upon saving.
+        {% elif mode == 'transfer' %}
+          Deducts stock from the source warehouse and credits the destination warehouse in a single atomic transaction.
+        {% else %}
+          Deducts stock from the selected source warehouse with real-time balance validation.
+        {% endif %}
+      </p>
+
+      <div class="process-divider"></div>
+
+      <div class="process-rule">
+        <span>✓</span>
+        <div>
+          <strong>Atomic Stock Safety</strong>
+          <small>Database transactions prevent negative stock quantities.</small>
+        </div>
+      </div>
+      <div class="process-rule">
+        <span>✓</span>
+        <div>
+          <strong>Auto Reference Code</strong>
+          <small>Generates unique tracking code for audit logs.</small>
+        </div>
+      </div>
+      <div class="process-rule">
+        <span>✓</span>
+        <div>
+          <strong>User Accountability</strong>
+          <small>Logged user: {{ current_user.full_name }} ({{ current_user.role|upper }})</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip-card">
+      <strong>Hardware Scanner Support</strong>
+      <p>USB barcode handheld scanners act as standard keyboard input. Simply scan into the code box or click <strong>Camera Scanner</strong> to use your laptop or mobile camera.</p>
+    </div>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
+<script>
+let currentProductStocks = {};
+
+function onProductChange() {
+  const sel = document.getElementById('productSelect');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt || !opt.value) return;
+
+  const cost = opt.dataset.cost;
+  const selling = opt.dataset.selling;
+  const unitPriceInput = document.getElementById('opUnitPrice');
+
+  if (unitPriceInput) {
+    if ('{{ mode }}' === 'grn') {
+      unitPriceInput.value = parseFloat(cost || 0).toFixed(2);
+    } else if ('{{ mode }}' === 'dispatch') {
+      unitPriceInput.value = parseFloat(selling || 0).toFixed(2);
+    }
+  }
+
+  calcTotal();
+
+  // Fetch warehouse balances for this product
+  fetch('/api/product-lookup?code=' + encodeURIComponent(opt.dataset.sku))
+    .then(r => r.json())
+    .then(data => {
+      currentProductStocks = {};
+      if (data.stocks) {
+        data.stocks.forEach(s => {
+          currentProductStocks[s.warehouse_id] = s.quantity;
+        });
+      }
+      checkAvailability();
+    })
+    .catch(e => console.error("Lookup error:", e));
+}
+
+function checkAvailability() {
+  const pSelect = document.getElementById('productSelect');
+  if (!pSelect.value) return;
+
+  const whId = '{{ mode }}' === 'transfer' 
+    ? document.getElementById('fromWarehouse').value 
+    : document.getElementById('warehouseSelect').value;
+
+  const dot = document.getElementById('availDot');
+  const text = document.getElementById('availText');
+
+  if (!whId) {
+    text.innerText = "Select a warehouse to check current balance.";
+    dot.className = "availability-dot";
+    return;
+  }
+
+  const currentQty = currentProductStocks[whId] !== undefined ? currentProductStocks[whId] : 0;
+
+  if (currentQty > 0) {
+    dot.className = "availability-dot dot-green";
+    text.innerHTML = `Current stock in selected warehouse: <b>${currentQty} units</b>`;
+  } else {
+    dot.className = "availability-dot dot-amber";
+    text.innerHTML = `Current stock in selected warehouse: <b>0 units</b>`;
+  }
+}
+
+function calcTotal() {
+  const qtyInput = document.getElementById('opQuantity');
+  const priceInput = document.getElementById('opUnitPrice');
+  const display = document.getElementById('calcTotalDisplay');
+
+  if (!display || !qtyInput || !priceInput) return;
+
+  const qty = parseFloat(qtyInput.value) || 0;
+  const price = parseFloat(priceInput.value) || 0;
+  const total = qty * price;
+  display.innerText = '{{ currency_symbol }}' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+</script>
+{% endblock %}

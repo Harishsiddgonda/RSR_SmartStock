@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Activity Logs · {{ company_name }}{% endblock %}
+{% block breadcrumb %}System Logs{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">AUDIT TRAIL & SYSTEM TELEMETRY</div>
+    <h1>Activity & Security Logs</h1>
+    <p>Chronological log of administrative actions, stock changes, authentication events, and data modifications.</p>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-heading inventory-heading">
+    <div>
+      <h2>Activity Event Log <span class="count-badge">{{ logs|length }}</span></h2>
+      <p>Latest 200 security and operational events</p>
+    </div>
+    <div class="search-box">
+      <span>⌕</span>
+      <input type="search" id="logSearch" placeholder="Search user, action, or details...">
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>TIMESTAMP</th>
+          <th>OPERATOR</th>
+          <th>MODULE</th>
+          <th>ACTION</th>
+          <th>DETAILS</th>
+          <th>IP ADDRESS</th>
+        </tr>
+      </thead>
+      <tbody id="logsBody">
+        {% for l in logs %}
+          <tr data-search="{{ (l.username ~ ' ' ~ l.module ~ ' ' ~ l.action ~ ' ' ~ l.details)|lower }}">
+            <td class="mono">#{{ l.id }}</td>
+            <td class="muted-cell">{{ l.created_at[:19] }}</td>
+            <td>
+              <strong style="color: #4f46e5;">{{ l.username }}</strong>
+            </td>
+            <td>
+              <span class="type-pill {{ l.module|lower }}">{{ l.module }}</span>
+            </td>
+            <td><strong>{{ l.action }}</strong></td>
+            <td style="max-width: 320px; white-space: normal; font-size: 11px;">{{ l.details }}</td>
+            <td class="mono" style="font-size: 10px;">{{ l.ip_address or '127.0.0.1' }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="7"><div class="empty-state">No log entries found.</div></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('logSearch').addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  document.querySelectorAll('#logsBody tr[data-search]').forEach(row => {
+    row.hidden = !row.dataset.search.includes(q);
+  });
+});
+</script>
+{% endblock %}

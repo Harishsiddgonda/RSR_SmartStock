@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}{{ warehouse.name }} Stock · {{ company_name }}{% endblock %}
+{% block breadcrumb %}Warehouses / {{ warehouse.name }}{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">WAREHOUSE SPECIFIC INVENTORY</div>
+    <h1>{{ warehouse.name }} <span class="mono" style="font-size: 16px;">({{ warehouse.code }})</span></h1>
+    <p>Location: {{ warehouse.location }} · Capacity: {{ '{:,}'.format(warehouse.capacity) }} units</p>
+  </div>
+  <div class="heading-actions">
+    <a class="btn btn-outline" href="{{ url_for('warehouses') }}">← Back to Warehouses</a>
+    <a class="btn btn-primary" href="{{ url_for('grn') }}">＋ Receive Inbound Stock</a>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Stored Products in {{ warehouse.name }} <span class="count-badge">{{ items|length }}</span></h2>
+      <p>Quantities physically residing in this storage facility.</p>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>PRODUCT</th>
+          <th>SKU / BARCODE</th>
+          <th>CATEGORY</th>
+          <th>STORED QUANTITY</th>
+          <th>UNIT COST</th>
+          <th>RETAIL PRICE</th>
+          <th>TOTAL COST VALUE</th>
+          <th>TOTAL RETAIL VALUE</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td>
+              <div class="product-name-cell">
+                <div class="product-avatar">{{ item.name[:1]|upper }}</div>
+                <div>
+                  <strong>{{ item.name }}</strong>
+                  <small>{{ item.unit }}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="mono">{{ item.sku }}</span>
+              <small class="cell-sub">{{ item.barcode }}</small>
+            </td>
+            <td class="muted-cell">{{ item.category_name or item.category }}</td>
+            <td class="quantity-cell">{{ item.quantity }}</td>
+            <td class="muted-cell">{{ currency_symbol }}{{ '{:,.2f}'.format(item.cost_price) }}</td>
+            <td class="muted-cell">{{ currency_symbol }}{{ '{:,.2f}'.format(item.selling_price) }}</td>
+            <td><strong>{{ currency_symbol }}{{ '{:,.2f}'.format(item.cost_valuation) }}</strong></td>
+            <td><strong>{{ currency_symbol }}{{ '{:,.2f}'.format(item.retail_valuation) }}</strong></td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8"><div class="empty-state">No products are currently stocked in this warehouse.</div></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

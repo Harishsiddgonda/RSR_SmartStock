@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% block title %}Stock Returns · {{ company_name }}{% endblock %}
+{% block breadcrumb %}Stock Returns{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">REVERSE LOGISTICS & DEFECTIVE GOODS</div>
+    <h1>Stock Returns Management</h1>
+    <p>Process customer product returns (inbound to warehouse) or supplier defect returns (outbound to vendor).</p>
+  </div>
+  <a class="btn btn-outline" href="{{ url_for('transactions') }}">
+    <span>◷</span> Transactions Log
+  </a>
+</div>
+
+<div class="operation-layout">
+  <section class="panel operation-panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Record Stock Return</h2>
+        <p>Choose return direction and specify reason</p>
+      </div>
+      <span class="form-step">RETURNS</span>
+    </div>
+
+    <form method="POST" action="{{ url_for('returns') }}" class="operation-form">
+      <div class="form-section-label">RETURN DIRECTION</div>
+      <div style="display: flex; gap: 20px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <label style="flex-direction: row; align-items: center; gap: 8px; font-weight: 700; cursor: pointer;">
+          <input type="radio" name="return_type" value="customer" checked onchange="toggleParty('customer')">
+          <span>Inbound Customer Return (+ Stock into warehouse)</span>
+        </label>
+        <label style="flex-direction: row; align-items: center; gap: 8px; font-weight: 700; cursor: pointer;">
+          <input type="radio" name="return_type" value="supplier" onchange="toggleParty('supplier')">
+          <span>Outbound Supplier Return (- Stock sent back to vendor)</span>
+        </label>
+      </div>
+
+      <div class="form-section-label section-spaced">PRODUCT & LOCATION</div>
+      <label>Product *
+        <select name="product_id" required>
+          <option value="">-- Choose Product --</option>
+          {% for p in products %}
+            <option value="{{ p.id }}">{{ p.name }} (SKU: {{ p.sku }})</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <div class="form-grid two-col" style="gap: 14px;">
+        <label>Warehouse *
+          <select name="warehouse_id" required>
+            <option value="">-- Select Warehouse --</option>
+            {% for wh in warehouses %}
+              <option value="{{ wh.id }}">{{ wh.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <!-- Customer Select -->
+        <label id="customerPartyBox">Customer
+          <select name="party_id" id="customerSelect">
+            <option value="">-- Select Customer (Optional) --</option>
+            {% for c in customers %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <!-- Supplier Select (Hidden initially) -->
+        <label id="supplierPartyBox" style="display: none;">Supplier
+          <select name="party_id" id="supplierSelect" disabled>
+            <option value="">-- Select Supplier (Optional) --</option>
+            {% for s in suppliers %}
+              <option value="{{ s.id }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+
+      <div class="form-section-label section-spaced">QUANTITY & REASON</div>
+      <label>Returned Quantity *
+        <input type="number" name="quantity" min="1" step="1" required placeholder="Number of units">
+      </label>
+      <label>Reason for Return *
+        <select name="reason">
+          <option value="Customer Exchange / Return">Customer Exchange / Return</option>
+          <option value="Defective / Damaged in Transit">Defective / Damaged in Transit</option>
+          <option value="Incorrect Specification Delivered">Incorrect Specification Delivered</option>
+          <option value="Warranty Replacement">Warranty Replacement</option>
+          <option value="Vendor Recall / Expired Goods">Vendor Recall / Expired Goods</option>
+        </select>
+      </label>
+
+      <div class="form-actions operation-actions">
+        <button class="btn btn-primary" type="submit">↩ Save Stock Return</button>
+        <a class="btn btn-outline" href="{{ url_for('dashboard') }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+
+  <aside class="operation-aside">
+    <div class="panel process-card">
+      <div class="process-icon">↩</div>
+      <h3>Reverse Logistics Controls</h3>
+      <p>Customer returns automatically restore sellable stock back to warehouse inventory. Supplier returns deduct rejected items from physical records.</p>
+      <div class="process-divider"></div>
+      <div class="process-rule">
+        <span>✓</span>
+        <div><strong>Complete Audit Trail</strong><small>Stored in movement logs with user and timestamp.</small></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- Returns History Table -->
+<section class="panel" style="margin-top: 24px;">
+  <div class="panel-heading">
+    <div>
+      <h2>Recent Returns History <span class="count-badge">{{ history|length }}</span></h2>
+      <p>Audit trail of all recorded returns</p>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>REFERENCE</th>
+          <th>TYPE</th>
+          <th>PRODUCT</th>
+          <th>QUANTITY</th>
+          <th>WAREHOUSE</th>
+          <th>REMARKS</th>
+          <th>RECORDED BY</th>
+          <th>DATE</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in history %}
+          <tr>
+            <td class="mono"><strong>{{ r.ref_no }}</strong></td>
+            <td>
+              <span class="type-pill {% if r.movement_type == 'RETURN_IN' %}grn{% else %}dispatch{% endif %}">
+                {{ 'Customer Return (+)' if r.movement_type == 'RETURN_IN' else 'Supplier Return (-)' }}
+              </span>
+            </td>
+            <td>
+              <strong>{{ r.product_name }}</strong>
+              <small class="cell-sub">{{ r.sku }}</small>
+            </td>
+            <td class="quantity-cell">{{ r.quantity }}</td>
+            <td class="muted-cell">{{ r.warehouse_name or '—' }}</td>
+            <td class="remarks-cell">{{ r.remarks }}</td>
+            <td class="muted-cell">{{ r.recorded_by or 'System' }}</td>
+            <td class="muted-cell">{{ r.created_at[:16] }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8"><div class="empty-state">No returns recorded yet.</div></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleParty(type) {
+  const custBox = document.getElementById('customerPartyBox');
+  const supBox = document.getElementById('supplierPartyBox');
+  const custSel = document.getElementById('customerSelect');
+  const supSel = document.getElementById('supplierSelect');
+
+  if (type === 'customer') {
+    custBox.style.display = 'block';
+    custSel.disabled = false;
+    supBox.style.display = 'none';
+    supSel.disabled = true;
+  } else {
+    custBox.style.display = 'none';
+    custSel.disabled = true;
+    supBox.style.display = 'block';
+    supSel.disabled = false;
+  }
+}
+</script>
+{% endblock %}

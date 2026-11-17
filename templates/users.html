@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block title %}User Management · {{ company_name }}{% endblock %}
+{% block breadcrumb %}User Management{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">ACCESS CONTROL & SECURITY</div>
+    <h1>User & Role Management</h1>
+    <p>Manage system operators, assign permission roles (Admin, Manager, Staff), and control account status.</p>
+  </div>
+  <button class="btn btn-primary" onclick="openAddUserModal()">
+    <span>＋</span> Create User Account
+  </button>
+</div>
+
+<!-- Add User Modal -->
+<div id="addUserModal" class="modal-backdrop" hidden>
+  <div class="modal-box modal-md">
+    <div class="modal-header">
+      <div>
+        <h3>Create New User Account</h3>
+        <p>Assign credentials and role permissions</p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeAddUserModal()">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('user_management') }}" class="modal-body stacked-form">
+      <div class="form-grid two-col" style="gap: 12px;">
+        <label>Username *
+          <input type="text" name="username" placeholder="e.g. john_doe" required maxlength="40">
+        </label>
+        <label>Role Assignment *
+          <select name="role">
+            <option value="staff">Staff (Operational Only)</option>
+            <option value="manager">Manager (Inventory & Reports)</option>
+            <option value="admin">Administrator (Full Control)</option>
+          </select>
+        </label>
+      </div>
+      <label>Full Name *
+        <input type="text" name="full_name" placeholder="e.g. Johnathan Doe" required maxlength="80">
+      </label>
+      <label>Email Address
+        <input type="email" name="email" placeholder="john@domain.com">
+      </label>
+      <label>Initial Password *
+        <input type="password" name="password" placeholder="At least 6 characters" required minlength="6">
+      </label>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeAddUserModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create User Account →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="resetPwdModal" class="modal-backdrop" hidden>
+  <div class="modal-box modal-sm">
+    <div class="modal-header">
+      <div>
+        <h3>Reset User Password</h3>
+        <p>Set a new password for <span id="resetUsername" style="font-weight: 700; color: #4f46e5;"></span></p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeResetModal()">&times;</button>
+    </div>
+    <form method="POST" id="resetPwdForm" class="modal-body stacked-form">
+      <label>New Password *
+        <input type="password" name="new_password" required minlength="6" placeholder="Minimum 6 characters">
+      </label>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeResetModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Reset Password →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Configured System Users <span class="count-badge">{{ users|length }}</span></h2>
+      <p>Users with authenticated login access to RSR SmartStock</p>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>USER</th>
+          <th>FULL NAME</th>
+          <th>ROLE</th>
+          <th>STATUS</th>
+          <th>CREATED DATE</th>
+          <th>LAST SIGN IN</th>
+          <th>SECURITY ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 9px;">
+                <div class="avatar" style="width: 28px; height: 28px; font-size: 11px;">
+                  {{ u.full_name[:1]|upper }}
+                </div>
+                <div>
+                  <strong class="mono" style="font-size: 12px; color: #1e293b;">{{ u.username }}</strong>
+                  <small style="display: block; font-size: 10px; color: #94a3b8;">{{ u.email or 'No email' }}</small>
+                </div>
+              </div>
+            </td>
+            <td><strong>{{ u.full_name }}</strong></td>
+            <td>
+              <span class="role-badge role-{{ u.role }}">
+                {{ u.role|upper }}
+              </span>
+            </td>
+            <td>
+              {% if u.is_active %}
+                <span class="status-pill status-good"><i></i> Active</span>
+              {% else %}
+                <span class="status-pill status-out"><i></i> Deactivated</span>
+              {% endif %}
+            </td>
+            <td class="muted-cell">{{ u.created_at[:10] }}</td>
+            <td class="muted-cell">{{ u.last_login[:16] if u.last_login else 'Never' }}</td>
+            <td>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn btn-secondary btn-xs" onclick="openResetModal({{ u.id }}, '{{ u.username }}')">
+                  🔑 Reset Pwd
+                </button>
+                {% if u.id != current_user.id %}
+                <form method="POST" action="{{ url_for('toggle_user_status', id=u.id) }}" style="display: inline;">
+                  <button type="submit" class="btn btn-outline btn-xs" style="{% if u.is_active %}color: #dc2626; border-color: #fecaca;{% else %}color: #16a34a; border-color: #bbf7d0;{% endif %}">
+                    {{ 'Deactivate' if u.is_active else 'Activate' }}
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openAddUserModal() { document.getElementById('addUserModal').hidden = false; }
+function closeAddUserModal() { document.getElementById('addUserModal').hidden = true; }
+
+function openResetModal(id, uname) {
+  document.getElementById('resetPwdForm').action = '/users/' + id + '/reset-password';
+  document.getElementById('resetUsername').innerText = uname;
+  document.getElementById('resetPwdModal').hidden = false;
+}
+function closeResetModal() { document.getElementById('resetPwdModal').hidden = true; }
+</script>
+{% endblock %}

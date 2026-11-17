@@ -1,0 +1,311 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard · {{ company_name }}{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">ENTERPRISE WMS · LIVE OPERATIONS OVERVIEW</div>
+    <h1>Welcome back, {{ current_user.full_name }} <span class="wave">✦</span></h1>
+    <p>Live inventory status, warehouse occupancy, financial valuation, and activity metrics.</p>
+  </div>
+  <div class="heading-actions">
+    <a class="btn btn-secondary" href="{{ url_for('transfer') }}"><span>⇄</span> Transfer</a>
+    <a class="btn btn-dark" href="{{ url_for('dispatch') }}"><span>↗</span> Dispatch</a>
+    <a class="btn btn-primary" href="{{ url_for('grn') }}"><span>＋</span> Receive Goods (GRN)</a>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon violet">▤</span>
+      <span class="stat-tag">CATALOGUE</span>
+    </div>
+    <div class="stat-value">{{ stats.sku_count }}</div>
+    <div class="stat-label">Total Active SKUs</div>
+    <div class="stat-foot">In {{ category_distribution|length }} categories</div>
+  </article>
+
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon blue">▦</span>
+      <span class="stat-tag">PHYSICAL STOCK</span>
+    </div>
+    <div class="stat-value">{{ '{:,}'.format(stats.total_units) }}</div>
+    <div class="stat-label">Total Stock Units</div>
+    <div class="stat-foot">Distributed in {{ warehouse_totals|length }} warehouses</div>
+  </article>
+
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon green">₹</span>
+      <span class="stat-tag">VALUATION (COST)</span>
+    </div>
+    <div class="stat-value">{{ currency_symbol }}{{ '{:,.2f}'.format(stats.total_cost_value) }}</div>
+    <div class="stat-label">Asset Valuation</div>
+    <div class="stat-foot">Retail Value: {{ currency_symbol }}{{ '{:,.2f}'.format(stats.total_retail_value) }}</div>
+  </article>
+
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon {% if stats.low_stock_count > 0 %}amber{% else %}green{% endif %}">⚑</span>
+      <span class="stat-tag">ALERTS</span>
+    </div>
+    <div class="stat-value">{{ stats.low_stock_count }}</div>
+    <div class="stat-label">Low Stock SKUs</div>
+    <div class="stat-foot">{{ stats.out_of_stock_count }} item(s) currently out of stock</div>
+  </article>
+</div>
+
+<!-- Interactive Analytics Charts Row -->
+<div class="dashboard-grid" style="margin-bottom: 22px;">
+  <section class="panel chart-panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Inventory Distribution by Category</h2>
+        <p>Physical units currently held across active product categories</p>
+      </div>
+      <a class="text-link" href="{{ url_for('categories') }}">Manage categories →</a>
+    </div>
+    <div style="position: relative; height: 260px; display: flex; align-items: center; justify-content: center;">
+      <canvas id="categoryChart"></canvas>
+    </div>
+  </section>
+
+  <section class="panel chart-panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Recent Movement Activity Trend</h2>
+        <p>Comparison of inbound receipts (GRN) vs outbound dispatches</p>
+      </div>
+      <a class="text-link" href="{{ url_for('transactions') }}">Movement history →</a>
+    </div>
+    <div style="position: relative; height: 260px; display: flex; align-items: center; justify-content: center;">
+      <canvas id="movementTrendChart"></canvas>
+    </div>
+  </section>
+</div>
+
+<div class="dashboard-grid">
+  <!-- Warehouse Occupancy Breakdown -->
+  <section class="panel warehouse-panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Warehouse Occupancy & Capacity</h2>
+        <p>Real-time units stored versus configured capacity</p>
+      </div>
+      <a class="text-link" href="{{ url_for('warehouses') }}">All warehouses →</a>
+    </div>
+    <div class="warehouse-list">
+      {% for wh in warehouse_totals %}
+        {% set occupancy_pct = (wh.units / (wh.capacity or 10000) * 100)|round(1) %}
+        {% if occupancy_pct > 100 %}{% set occupancy_pct = 100 %}{% endif %}
+        <div class="warehouse-row">
+          <div class="warehouse-symbol">▥</div>
+          <div class="warehouse-info">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong>{{ wh.name }} <span class="mono" style="font-size: 10px;">{{ wh.code }}</span></strong>
+              <small style="color: #64748b; font-weight: 600;">{{ occupancy_pct }}% capacity</small>
+            </div>
+            <div class="progress-track" style="margin-top: 6px;">
+              <span style="width: {{ occupancy_pct }}%; {% if occupancy_pct > 85 %}background: #f59e0b;{% endif %}"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; margin-top: 4px;">
+              <span>{{ wh.active_skus }} active product(s)</span>
+              <span>Capacity: {{ '{:,}'.format(wh.capacity) }}</span>
+            </div>
+          </div>
+          <div class="warehouse-quantity">
+            {{ '{:,}'.format(wh.units) }} <small>units</small>
+          </div>
+        </div>
+      {% else %}
+        <div class="empty-state">No warehouses created yet.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Low Stock Watchlist -->
+  <section class="panel alert-panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Reorder Watchlist</h2>
+        <p>Products at or below their configured minimum threshold</p>
+      </div>
+      <a class="text-link" href="{{ url_for('alerts') }}">Full alert view →</a>
+    </div>
+    {% if low_stock %}
+      <div class="mini-alert-list">
+        {% for item in low_stock %}
+          <div class="mini-alert">
+            <div class="product-avatar">{{ item.name[:1]|upper }}</div>
+            <div class="mini-alert-info">
+              <strong>{{ item.name }}</strong>
+              <small>{{ item.sku }} · {{ item.category_name or 'General' }}</small>
+            </div>
+            <div class="stock-count">
+              <strong style="color: {% if item.total_stock == 0 %}#ef4444{% else %}#f59e0b{% endif %};">
+                {{ item.total_stock }} {{ item.unit }}
+              </strong>
+              <small>Min: {{ item.reorder_level }}</small>
+            </div>
+            <div style="margin-left: 10px;">
+              <a href="{{ url_for('grn') }}" class="btn btn-secondary btn-sm" style="height: 28px; padding: 0 9px; font-size: 10px;" title="Receive stock">
+                + GRN
+              </a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state success-empty">
+        <span style="font-size: 24px; display: block; margin-bottom: 6px;">✓</span>
+        Excellent! All products are stocked above their reorder thresholds.
+      </div>
+    {% endif %}
+  </section>
+</div>
+
+<!-- Recent Stock Movements Audit Table -->
+<section class="panel recent-panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Recent Inventory Movements</h2>
+      <p>Latest inbound receipts, warehouse transfers, and customer dispatches</p>
+    </div>
+    <a class="text-link" href="{{ url_for('transactions') }}">Full audit history →</a>
+  </div>
+
+  {% if recent %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>REFERENCE</th>
+            <th>PRODUCT</th>
+            <th>OPERATION</th>
+            <th>QUANTITY</th>
+            <th>ROUTE / LOCATION</th>
+            <th>RECORDED BY</th>
+            <th>DATE & TIME</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in recent %}
+            <tr>
+              <td class="mono"><strong>{{ item.ref_no }}</strong></td>
+              <td>
+                <strong>{{ item.product_name }}</strong>
+                <small class="cell-sub">{{ item.sku }}</small>
+              </td>
+              <td>
+                <span class="type-pill {{ item.movement_type|lower }}">{{ item.movement_type }}</span>
+              </td>
+              <td class="quantity-cell">{{ item.quantity }}</td>
+              <td class="muted-cell">
+                {% if item.from_name and item.to_name %}
+                  {{ item.from_name }} → {{ item.to_name }}
+                {% elif item.to_name %}
+                  Received at {{ item.to_name }}
+                {% elif item.from_name %}
+                  Dispatched from {{ item.from_name }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td class="muted-cell">{{ item.recorded_by or 'System' }}</td>
+              <td class="muted-cell">{{ item.created_at[:16] }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">No movements recorded yet. Receive goods via GRN to get started.</div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  fetch('/api/chart-data')
+    .then(res => res.json())
+    .then(data => {
+      // 1. Category Breakdown Doughnut Chart
+      const catCtx = document.getElementById('categoryChart');
+      if (catCtx && data.categories.labels.length > 0) {
+        new Chart(catCtx, {
+          type: 'doughnut',
+          data: {
+            labels: data.categories.labels,
+            datasets: [{
+              data: data.categories.values,
+              backgroundColor: [
+                '#6366f1', '#38bdf8', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#64748b'
+              ],
+              borderWidth: 2,
+              borderColor: '#ffffff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'right',
+                labels: {
+                  boxWidth: 12,
+                  font: { family: "'DM Sans', sans-serif", size: 11 }
+                }
+              }
+            },
+            cutout: '65%'
+          }
+        });
+      }
+
+      // 2. Movement Trend Chart
+      const trendCtx = document.getElementById('movementTrendChart');
+      if (trendCtx && data.trends.labels.length > 0) {
+        new Chart(trendCtx, {
+          type: 'bar',
+          data: {
+            labels: data.trends.labels,
+            datasets: [
+              {
+                label: 'Inbound Units',
+                data: data.trends.inbound,
+                backgroundColor: '#10b981',
+                borderRadius: 4
+              },
+              {
+                label: 'Outbound Units',
+                data: data.trends.outbound,
+                backgroundColor: '#f97316',
+                borderRadius: 4
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { grid: { display: false } },
+              y: { beginAtZero: true, grid: { color: '#f1f5f9' } }
+            },
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: { boxWidth: 12, font: { family: "'DM Sans', sans-serif", size: 11 } }
+              }
+            }
+          }
+        });
+      }
+    })
+    .catch(err => console.error("Error loading dashboard charts:", err));
+});
+</script>
+{% endblock %}

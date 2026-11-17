@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% block title %}Categories · {{ company_name }}{% endblock %}
+{% block breadcrumb %}Categories{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">CATALOGUE TAXONOMY</div>
+    <h1>Product Categories</h1>
+    <p>Organize inventory into logical categories for tracking, reporting, and filtration.</p>
+  </div>
+  {% if current_user and current_user.role in ['admin', 'manager'] %}
+  <button class="btn btn-primary" onclick="openAddCatModal()">
+    <span>＋</span> Add Category
+  </button>
+  {% endif %}
+</div>
+
+<!-- Add Category Modal -->
+{% if current_user and current_user.role in ['admin', 'manager'] %}
+<div id="addCatModal" class="modal-backdrop" hidden>
+  <div class="modal-box modal-md">
+    <div class="modal-header">
+      <div>
+        <h3>Add New Category</h3>
+        <p>Define category name, unique code, and description</p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeAddCatModal()">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('categories') }}" class="modal-body stacked-form">
+      <label>Category Name *
+        <input type="text" name="name" placeholder="e.g. Computer Peripherals" required maxlength="100">
+      </label>
+      <label>Category Code *
+        <input type="text" name="code" placeholder="e.g. CAT-PERIPH" required maxlength="30" style="text-transform: uppercase;">
+      </label>
+      <label>Description
+        <textarea name="description" rows="3" placeholder="Category purpose or product types..."></textarea>
+      </label>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeAddCatModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Category →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Category Modal -->
+<div id="editCatModal" class="modal-backdrop" hidden>
+  <div class="modal-box modal-md">
+    <div class="modal-header">
+      <div>
+        <h3>Edit Category</h3>
+        <p>Update category name or description</p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeEditCatModal()">&times;</button>
+    </div>
+    <form method="POST" id="editCatForm" class="modal-body stacked-form">
+      <label>Category Name *
+        <input type="text" name="name" id="edit_cat_name" required maxlength="100">
+      </label>
+      <label>Category Code *
+        <input type="text" name="code" id="edit_cat_code" required maxlength="30" style="text-transform: uppercase;">
+      </label>
+      <label>Description
+        <textarea name="description" id="edit_cat_desc" rows="3"></textarea>
+      </label>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeEditCatModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Category →</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Category Directory <span class="count-badge">{{ categories|length }}</span></h2>
+      <p>Summary of products and total units associated with each category.</p>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>CODE</th>
+          <th>CATEGORY NAME</th>
+          <th>DESCRIPTION</th>
+          <th>ACTIVE SKUS</th>
+          <th>TOTAL UNITS</th>
+          {% if current_user and current_user.role in ['admin', 'manager'] %}
+          <th>ACTIONS</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for cat in categories %}
+          <tr>
+            <td class="mono"><strong>{{ cat.code }}</strong></td>
+            <td>
+              <strong>{{ cat.name }}</strong>
+            </td>
+            <td class="muted-cell">{{ cat.description or '—' }}</td>
+            <td>
+              <a href="{{ url_for('inventory', category=cat.id) }}" class="text-link" title="Filter products">
+                {{ cat.product_count }} SKU(s)
+              </a>
+            </td>
+            <td class="quantity-cell">{{ '{:,}'.format(cat.total_units) }}</td>
+            {% if current_user and current_user.role in ['admin', 'manager'] %}
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn btn-secondary btn-xs" 
+                        onclick="openEditCatModal({{ cat.id }}, '{{ cat.name|replace("'", "\\'") }}', '{{ cat.code }}', '{{ (cat.description or "")|replace("'", "\\'") }}')">
+                  ✏ Edit
+                </button>
+                {% if current_user.role == 'admin' %}
+                <form method="POST" action="{{ url_for('delete_category', id=cat.id) }}" style="display: inline;" onsubmit="return confirm('Delete category \'{{ cat.name }}\'?');">
+                  <button type="submit" class="btn btn-danger btn-xs" title="Delete category">✕</button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6"><div class="empty-state">No categories defined yet.</div></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openAddCatModal() { document.getElementById('addCatModal').hidden = false; }
+function closeAddCatModal() { document.getElementById('addCatModal').hidden = true; }
+
+function openEditCatModal(id, name, code, desc) {
+  document.getElementById('editCatForm').action = '/categories/' + id + '/edit';
+  document.getElementById('edit_cat_name').value = name;
+  document.getElementById('edit_cat_code').value = code;
+  document.getElementById('edit_cat_desc').value = desc;
+  document.getElementById('editCatModal').hidden = false;
+}
+function closeEditCatModal() { document.getElementById('editCatModal').hidden = true; }
+</script>
+{% endblock %}

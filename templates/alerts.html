@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Stock Alerts · {{ company_name }}{% endblock %}
+{% block breadcrumb %}Stock Alerts{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">REPLENISHMENT & SHORTAGE MONITOR</div>
+    <h1>Stock Alerts & Replenishment</h1>
+    <p>Real-time monitor of SKUs whose total inventory across all warehouses has fallen at or below safety reorder levels.</p>
+  </div>
+  <a class="btn btn-primary" href="{{ url_for('grn') }}">
+    <span>＋</span> Receive Inbound Stock (GRN)
+  </a>
+</div>
+
+<div class="alert-summary">
+  <div class="alert-summary-icon">⚑</div>
+  <div>
+    <strong>{{ rows|length }} product(s) require procurement replenishment</strong>
+    <p>Alert thresholds are computed across all connected warehouse storage facilities.</p>
+  </div>
+</div>
+
+<section class="panel inventory-panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Reorder Watchlist <span class="count-badge">{{ rows|length }}</span></h2>
+      <p>Initiate supplier purchase orders to prevent stockouts.</p>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>PRODUCT</th>
+          <th>SKU / BARCODE</th>
+          <th>CATEGORY</th>
+          <th>CURRENT STOCK</th>
+          <th>MIN REORDER LEVEL</th>
+          <th>DEFICIT / SHORTAGE</th>
+          <th>ESTIMATED REPLENISHMENT COST</th>
+          <th>ACTION</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          {% set shortage = row.reorder_level - row.total_stock %}
+          {% if shortage < 0 %}{% set shortage = 0 %}{% endif %}
+          <tr>
+            <td>
+              <div class="product-name-cell">
+                <div class="product-avatar" style="background: #fef2f2; color: #dc2626;">{{ row.name[:1]|upper }}</div>
+                <div>
+                  <strong>{{ row.name }}</strong>
+                  <small>{{ row.unit }}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="mono">{{ row.sku }}</span>
+              <small class="cell-sub">{{ row.barcode }}</small>
+            </td>
+            <td class="muted-cell">{{ row.category_name or row.category }}</td>
+            <td class="quantity-cell alert-number">
+              {% if row.total_stock == 0 %}
+                <span style="color: #dc2626; font-weight: 800;">0 (OUT OF STOCK)</span>
+              {% else %}
+                {{ row.total_stock }}
+              {% endif %}
+            </td>
+            <td class="muted-cell">{{ row.reorder_level }}</td>
+            <td>
+              <span class="shortage-pill">
+                {{ shortage }} units needed
+              </span>
+            </td>
+            <td>
+              <strong>{{ currency_symbol }}{{ '{:,.2f}'.format(shortage * (row.cost_price or 0)) }}</strong>
+            </td>
+            <td>
+              <a class="btn btn-primary btn-xs" href="{{ url_for('grn') }}">
+                ＋ Create GRN →
+              </a>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8">
+              <div class="empty-state success-empty">
+                <span style="font-size: 24px; display: block; margin-bottom: 6px;">✓</span>
+                All inventory levels are healthy! No products are currently below their reorder thresholds.
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Settings & Backup · {{ company_name }}{% endblock %}
+{% block breadcrumb %}System Settings{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">CONFIGURATION & DATABASE TOOLS</div>
+    <h1>Application & Business Settings</h1>
+    <p>Configure enterprise profile, currency symbols, inventory defaults, and perform database backups.</p>
+  </div>
+  {% if current_user and current_user.role == 'admin' %}
+  <a class="btn btn-primary" href="{{ url_for('download_backup') }}">
+    <span>💾</span> Download Database Backup (.db)
+  </a>
+  {% endif %}
+</div>
+
+<div class="operation-layout">
+  <section class="panel operation-panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Company & System Profile</h2>
+        <p>Update header information displayed across receipts, reports, and invoices</p>
+      </div>
+      <span class="form-step">CONFIG</span>
+    </div>
+
+    <form method="POST" action="{{ url_for('settings') }}" class="operation-form">
+      <div class="form-section-label">ENTERPRISE IDENTITY</div>
+      <div class="form-grid two-col" style="gap: 14px;">
+        <label>Company / Organization Name *
+          <input type="text" name="company_name" value="{{ settings.company_name }}" required>
+        </label>
+        <label>System Tagline
+          <input type="text" name="company_tagline" value="{{ settings.company_tagline }}">
+        </label>
+      </div>
+
+      <div class="form-grid two-col" style="gap: 14px;">
+        <label>Contact Email
+          <input type="email" name="contact_email" value="{{ settings.contact_email }}">
+        </label>
+        <label>Contact Phone
+          <input type="text" name="contact_phone" value="{{ settings.contact_phone }}">
+        </label>
+      </div>
+
+      <label>Headquarters / Warehouse Address
+        <textarea name="company_address" rows="2">{{ settings.company_address }}</textarea>
+      </label>
+
+      <label>Tax / GST / VAT Registration Number
+        <input type="text" name="tax_number" value="{{ settings.tax_number }}">
+      </label>
+
+      <div class="form-section-label section-spaced">LOCALIZATION & INVENTORY RULES</div>
+      <div class="form-grid two-col" style="gap: 14px;">
+        <label>Currency Symbol *
+          <select name="currency_symbol">
+            <option value="₹" {% if settings.currency_symbol == '₹' %}selected{% endif %}>₹ (INR - Indian Rupee)</option>
+            <option value="$" {% if settings.currency_symbol == '$' %}selected{% endif %}>$ (USD - US Dollar)</option>
+            <option value="€" {% if settings.currency_symbol == '€' %}selected{% endif %}>€ (EUR - Euro)</option>
+            <option value="£" {% if settings.currency_symbol == '£' %}selected{% endif %}>£ (GBP - British Pound)</option>
+            <option value="AED" {% if settings.currency_symbol == 'AED' %}selected{% endif %}>AED (UAE Dirham)</option>
+            <option value="¥" {% if settings.currency_symbol == '¥' %}selected{% endif %}>¥ (JPY / CNY)</option>
+          </select>
+        </label>
+        <label>Default Reorder Safety Stock Level
+          <input type="number" name="default_reorder_level" min="1" value="{{ settings.default_reorder_level }}">
+        </label>
+      </div>
+
+      <div class="form-actions operation-actions">
+        <button class="btn btn-primary" type="submit">Save System Settings →</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="operation-aside">
+    <!-- Database Health & Backup Card -->
+    <div class="panel process-card">
+      <div class="process-icon">💾</div>
+      <h3>Database Engine & Health</h3>
+      <p>Embedded SQLite 3 engine with atomic ACID compliance and zero external dependencies.</p>
+      
+      <div class="process-divider"></div>
+
+      <div class="process-rule">
+        <span>✓</span>
+        <div>
+          <strong>Database Size on Disk</strong>
+          <small>{{ db_stats.db_size_kb }} KB</small>
+        </div>
+      </div>
+      <div class="process-rule">
+        <span>✓</span>
+        <div>
+          <strong>Total Stored Products</strong>
+          <small>{{ db_stats.total_products }} active SKUs</small>
+        </div>
+      </div>
+      <div class="process-rule">
+        <span>✓</span>
+        <div>
+          <strong>Total Movement Entries</strong>
+          <small>{{ db_stats.total_movements }} audit records</small>
+        </div>
+      </div>
+      <div class="process-rule">
+        <span>✓</span>
+        <div>
+          <strong>Total User Accounts</strong>
+          <small>{{ db_stats.total_users }} registered accounts</small>
+        </div>
+      </div>
+
+      {% if current_user and current_user.role == 'admin' %}
+      <div style="margin-top: 20px;">
+        <a href="{{ url_for('download_backup') }}" class="btn btn-outline" style="width: 100%;">
+          <span>📥</span> Download Full .db Backup
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="tip-card">
+      <strong>Zero External Dependencies</strong>
+      <p>SQLite requires no background service daemon, no network port configuration, and is 100% portable across Windows, Mac, and Linux environments.</p>
+    </div>
+  </aside>
+</div>
+{% endblock %}

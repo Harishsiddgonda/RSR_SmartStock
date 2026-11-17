@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ company_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN for interactive visual analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="{{ url_for('dashboard') }}">
+        <span class="brand-mark">RSR</span>
+        <span class="brand-copy">
+          <strong>SmartStock</strong>
+          <small>ENTERPRISE WMS</small>
+        </span>
+      </a>
+
+      <div class="nav-label">OVERVIEW</div>
+      <nav class="main-nav">
+        <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
+          <span class="nav-icon">▦</span> Dashboard
+        </a>
+      </nav>
+
+      <div class="nav-label nav-label-spaced">INVENTORY & CATALOGUE</div>
+      <nav class="main-nav">
+        <a class="nav-link {% if request.endpoint in ['inventory', 'products'] %}active{% endif %}" href="{{ url_for('inventory') }}">
+          <span class="nav-icon">▤</span> Products & Stock
+        </a>
+        <a class="nav-link {% if request.endpoint == 'categories' %}active{% endif %}" href="{{ url_for('categories') }}">
+          <span class="nav-icon">🗂</span> Categories
+        </a>
+      </nav>
+
+      <div class="nav-label nav-label-spaced">OPERATIONS & LOGISTICS</div>
+      <nav class="main-nav">
+        <a class="nav-link {% if request.endpoint == 'grn' %}active{% endif %}" href="{{ url_for('grn') }}">
+          <span class="nav-icon">＋</span> Goods Receipt (GRN)
+        </a>
+        <a class="nav-link {% if request.endpoint == 'transfer' %}active{% endif %}" href="{{ url_for('transfer') }}">
+          <span class="nav-icon">⇄</span> Stock Transfer
+        </a>
+        <a class="nav-link {% if request.endpoint == 'dispatch' %}active{% endif %}" href="{{ url_for('dispatch') }}">
+          <span class="nav-icon">↗</span> Dispatch & Sales
+        </a>
+        {% if current_user and current_user.role in ['admin', 'manager'] %}
+        <a class="nav-link {% if request.endpoint == 'returns' %}active{% endif %}" href="{{ url_for('returns') }}">
+          <span class="nav-icon">↩</span> Stock Returns
+        </a>
+        <a class="nav-link {% if request.endpoint == 'adjustments' %}active{% endif %}" href="{{ url_for('adjustments') }}">
+          <span class="nav-icon">⚖</span> Stock Adjustments
+        </a>
+        {% endif %}
+      </nav>
+
+      <div class="nav-label nav-label-spaced">PARTIES & DIRECTORY</div>
+      <nav class="main-nav">
+        <a class="nav-link {% if request.endpoint == 'suppliers' %}active{% endif %}" href="{{ url_for('suppliers') }}">
+          <span class="nav-icon">🏭</span> Suppliers
+        </a>
+        <a class="nav-link {% if request.endpoint == 'customers' %}active{% endif %}" href="{{ url_for('customers') }}">
+          <span class="nav-icon">👥</span> Customers
+        </a>
+      </nav>
+
+      <div class="nav-label nav-label-spaced">MANAGEMENT & AUDIT</div>
+      <nav class="main-nav">
+        <a class="nav-link {% if request.endpoint in ['warehouses', 'warehouse_stock_detail'] %}active{% endif %}" href="{{ url_for('warehouses') }}">
+          <span class="nav-icon">▥</span> Warehouses
+        </a>
+        <a class="nav-link {% if request.endpoint == 'transactions' %}active{% endif %}" href="{{ url_for('transactions') }}">
+          <span class="nav-icon">◷</span> Movements Audit
+        </a>
+        <a class="nav-link {% if request.endpoint == 'alerts' %}active{% endif %}" href="{{ url_for('alerts') }}">
+          <span class="nav-icon">♧</span> Stock Alerts
+        </a>
+        <a class="nav-link {% if request.endpoint == 'report_dashboard' %}active{% endif %}" href="{{ url_for('report_dashboard') }}">
+          <span class="nav-icon">📊</span> Reports & Exports
+        </a>
+      </nav>
+
+      {% if current_user and current_user.role == 'admin' %}
+      <div class="nav-label nav-label-spaced">ADMINISTRATION</div>
+      <nav class="main-nav">
+        <a class="nav-link {% if request.endpoint == 'user_management' %}active{% endif %}" href="{{ url_for('user_management') }}">
+          <span class="nav-icon">🛡</span> Users & Roles
+        </a>
+        <a class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">
+          <span class="nav-icon">⚙</span> Settings & Backup
+        </a>
+        <a class="nav-link {% if request.endpoint == 'activity_logs' %}active{% endif %}" href="{{ url_for('activity_logs') }}">
+          <span class="nav-icon">📝</span> Activity Logs
+        </a>
+      </nav>
+      {% elif current_user and current_user.role == 'manager' %}
+      <div class="nav-label nav-label-spaced">ADMINISTRATION</div>
+      <nav class="main-nav">
+        <a class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">
+          <span class="nav-icon">⚙</span> Settings
+        </a>
+        <a class="nav-link {% if request.endpoint == 'activity_logs' %}active{% endif %}" href="{{ url_for('activity_logs') }}">
+          <span class="nav-icon">📝</span> Activity Logs
+        </a>
+      </nav>
+      {% endif %}
+
+      <div class="sidebar-bottom">
+        <div class="sidebar-user">
+          <div class="avatar">{{ current_user.full_name[:1] if current_user else 'U' }}</div>
+          <div style="flex: 1; min-width: 0;">
+            <strong>{{ current_user.full_name if current_user else 'Guest User' }}</strong>
+            <small style="text-transform: uppercase; color: #a5b4fc; font-weight: 700;">{{ current_user.role if current_user else 'Guest' }}</small>
+          </div>
+          <a href="{{ url_for('logout') }}" title="Sign Out" class="logout-icon-btn" aria-label="Sign out">⎋</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
+        <div class="breadcrumb">
+          {{ company_name }} <span>/</span> <strong>{% block breadcrumb %}Overview{% endblock %}</strong>
+        </div>
+        <div class="topbar-right">
+          <a class="btn btn-secondary btn-sm" href="{{ url_for('grn') }}" title="Quick Scan or Inbound">
+            <span>📷</span> Scan Code
+          </a>
+          <span class="environment-pill">
+            <i></i> {{ current_user.role|upper if current_user else 'LOCAL' }} WORKSPACE
+          </span>
+          <a href="{{ url_for('profile') }}" class="top-avatar" title="My Profile ({{ current_user.username if current_user else '' }})">
+            {{ current_user.full_name[:1] if current_user else 'U' }}
+          </a>
+          <a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm" style="height: 32px; padding: 0 10px; font-size: 11px;">
+            Sign Out
+          </a>
+        </div>
+      </header>
+
+      <section class="page-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-stack">
+              {% for category, message in messages %}
+                <div class="flash-message {{ category }}">
+                  <span>{{ '✓' if category == 'success' else '!' }}</span>
+                  <div style="flex: 1;">{{ message }}</div>
+                  <button type="button" class="flash-close" aria-label="Dismiss">×</button>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+      </section>
+
+      <footer class="footer">
+        <span>© {{ current_year }} {{ company_name }} · {{ company_tagline }}</span>
+        <span>Secure Session Active · Database: SQLite 3.x</span>
+      </footer>
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

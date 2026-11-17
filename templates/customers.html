@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% block title %}Customers · {{ company_name }}{% endblock %}
+{% block breadcrumb %}Customers{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">CLIENT & ACCOUNTS DIRECTORY</div>
+    <h1>Customers & Clients</h1>
+    <p>Manage enterprise clients, retail outlets, dispatch orders, and sales contacts.</p>
+  </div>
+  {% if current_user and current_user.role in ['admin', 'manager'] %}
+  <button class="btn btn-primary" onclick="openAddCustModal()">
+    <span>＋</span> Register Customer
+  </button>
+  {% endif %}
+</div>
+
+<!-- Add Customer Modal -->
+{% if current_user and current_user.role in ['admin', 'manager'] %}
+<div id="addCustModal" class="modal-backdrop" hidden>
+  <div class="modal-box modal-md">
+    <div class="modal-header">
+      <div>
+        <h3>Register New Customer</h3>
+        <p>Enter client account details and shipping destination</p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeAddCustModal()">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('customers') }}" class="modal-body stacked-form">
+      <label>Customer / Enterprise Name *
+        <input type="text" name="name" placeholder="e.g. Apex Technologies Ltd" required maxlength="100">
+      </label>
+      <label>Customer Code *
+        <input type="text" name="code" placeholder="e.g. CUST-505" required maxlength="30" style="text-transform: uppercase;">
+      </label>
+      <label>Contact Person
+        <input type="text" name="contact_person" placeholder="e.g. Anand Murthy" maxlength="80">
+      </label>
+      <div class="form-grid two-col" style="gap: 12px;">
+        <label>Email Address
+          <input type="email" name="email" placeholder="client@domain.com">
+        </label>
+        <label>Phone Number
+          <input type="tel" name="phone" placeholder="+91 98450 00000">
+        </label>
+      </div>
+      <label>Delivery / Billing Address
+        <textarea name="address" rows="2" placeholder="Street, Building, City, Pin Code..."></textarea>
+      </label>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeAddCustModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Customer →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Customer Modal -->
+<div id="editCustModal" class="modal-backdrop" hidden>
+  <div class="modal-box modal-md">
+    <div class="modal-header">
+      <div>
+        <h3>Edit Customer Details</h3>
+        <p>Update customer address or contact details</p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeEditCustModal()">&times;</button>
+    </div>
+    <form method="POST" id="editCustForm" class="modal-body stacked-form">
+      <label>Customer / Enterprise Name *
+        <input type="text" name="name" id="edit_cust_name" required maxlength="100">
+      </label>
+      <label>Customer Code *
+        <input type="text" name="code" id="edit_cust_code" required maxlength="30" style="text-transform: uppercase;">
+      </label>
+      <label>Contact Person
+        <input type="text" name="contact_person" id="edit_cust_person">
+      </label>
+      <div class="form-grid two-col" style="gap: 12px;">
+        <label>Email Address
+          <input type="email" name="email" id="edit_cust_email">
+        </label>
+        <label>Phone Number
+          <input type="tel" name="phone" id="edit_cust_phone">
+        </label>
+      </div>
+      <label>Delivery / Billing Address
+        <textarea name="address" id="edit_cust_address" rows="2"></textarea>
+      </label>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeEditCustModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Customer →</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <h2>Registered Clients & Customers <span class="count-badge">{{ customers|length }}</span></h2>
+      <p>Customer accounts, contact personnel, and outbound dispatch totals.</p>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>CODE</th>
+          <th>CUSTOMER NAME</th>
+          <th>CONTACT PERSON</th>
+          <th>EMAIL / PHONE</th>
+          <th>ADDRESS</th>
+          <th>DISPATCH ORDERS</th>
+          <th>TOTAL REVENUE</th>
+          {% if current_user and current_user.role in ['admin', 'manager'] %}
+          <th>ACTIONS</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for cust in customers %}
+          <tr>
+            <td class="mono"><strong>{{ cust.code }}</strong></td>
+            <td><strong>{{ cust.name }}</strong></td>
+            <td>{{ cust.contact_person or '—' }}</td>
+            <td>
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                {% if cust.email %}<a href="mailto:{{ cust.email }}" class="text-link" style="font-size: 10px;">{{ cust.email }}</a>{% endif %}
+                <small class="muted-cell">{{ cust.phone or '—' }}</small>
+              </div>
+            </td>
+            <td class="muted-cell" style="max-width: 200px; white-space: normal; font-size: 10px;">{{ cust.address or '—' }}</td>
+            <td>
+              <span class="type-pill dispatch">{{ cust.dispatch_count }} order(s)</span>
+            </td>
+            <td>
+              <strong>{{ currency_symbol }}{{ '{:,.2f}'.format(cust.total_dispatched) }}</strong>
+            </td>
+            {% if current_user and current_user.role in ['admin', 'manager'] %}
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn btn-secondary btn-xs"
+                        onclick="openEditCustModal({{ cust.id }}, '{{ cust.name|replace("'", "\\'") }}', '{{ cust.code }}', '{{ (cust.contact_person or "")|replace("'", "\\'") }}', '{{ cust.email or "" }}', '{{ cust.phone or "" }}', '{{ (cust.address or "")|replace("'", "\\'") }}')">
+                  ✏ Edit
+                </button>
+                {% if current_user.role == 'admin' %}
+                <form method="POST" action="{{ url_for('delete_customer', id=cust.id) }}" style="display: inline;" onsubmit="return confirm('Delete customer \'{{ cust.name }}\'?');">
+                  <button type="submit" class="btn btn-danger btn-xs" title="Delete customer">✕</button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8"><div class="empty-state">No customers registered yet.</div></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openAddCustModal() { document.getElementById('addCustModal').hidden = false; }
+function closeAddCustModal() { document.getElementById('addCustModal').hidden = true; }
+
+function openEditCustModal(id, name, code, person, email, phone, addr) {
+  document.getElementById('editCustForm').action = '/customers/' + id + '/edit';
+  document.getElementById('edit_cust_name').value = name;
+  document.getElementById('edit_cust_code').value = code;
+  document.getElementById('edit_cust_person').value = person;
+  document.getElementById('edit_cust_email').value = email;
+  document.getElementById('edit_cust_phone').value = phone;
+  document.getElementById('edit_cust_address').value = addr;
+  document.getElementById('editCustModal').hidden = false;
+}
+function closeEditCustModal() { document.getElementById('editCustModal').hidden = true; }
+</script>
+{% endblock %}

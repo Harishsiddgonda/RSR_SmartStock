@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+{% block title %}Reports & Valuation · {{ company_name }}{% endblock %}
+{% block breadcrumb %}Reports & Analytics{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">EXECUTIVE INTELLIGENCE & AUDIT</div>
+    <h1>Financial Reports & Valuation</h1>
+    <p>Comprehensive inventory valuation, purchasing records, sales dispatch totals, and Excel/PDF export generation.</p>
+  </div>
+  <div class="heading-actions no-print">
+    {% if tab == 'valuation' %}
+      <a class="btn btn-outline" href="{{ url_for('export_csv', type='valuation') }}">
+        <span>📄</span> Download CSV
+      </a>
+      <a class="btn btn-secondary" href="{{ url_for('export_excel', type='valuation') }}">
+        <span>📥</span> Export Valuation (Excel)
+      </a>
+    {% elif tab == 'movements' %}
+      <a class="btn btn-secondary" href="{{ url_for('export_excel', type='movements') }}">
+        <span>📥</span> Export Movements (Excel)
+      </a>
+    {% endif %}
+    <button class="btn btn-primary" onclick="window.print()">
+      <span>🖨</span> Print / Save PDF
+    </button>
+  </div>
+</div>
+
+<!-- Tab Navigation Navigation Bar -->
+<div class="report-tabs no-print" style="display: flex; gap: 8px; border-bottom: 1px solid #e2e8f0; margin-bottom: 22px;">
+  <a href="{{ url_for('report_dashboard', tab='valuation') }}" 
+     class="tab-link {% if tab == 'valuation' %}active{% endif %}"
+     style="padding: 10px 18px; font-weight: 700; font-size: 13px; border-bottom: 2px solid {% if tab == 'valuation' %}#6366f1{% else %}transparent{% endif %}; color: {% if tab == 'valuation' %}#4f46e5{% else %}#64748b{% endif %};">
+    💰 Inventory Asset Valuation
+  </a>
+  <a href="{{ url_for('report_dashboard', tab='movements') }}" 
+     class="tab-link {% if tab == 'movements' %}active{% endif %}"
+     style="padding: 10px 18px; font-weight: 700; font-size: 13px; border-bottom: 2px solid {% if tab == 'movements' %}#6366f1{% else %}transparent{% endif %}; color: {% if tab == 'movements' %}#4f46e5{% else %}#64748b{% endif %};">
+    ⇄ Movements Audit Report
+  </a>
+  <a href="{{ url_for('report_dashboard', tab='purchases') }}" 
+     class="tab-link {% if tab == 'purchases' %}active{% endif %}"
+     style="padding: 10px 18px; font-weight: 700; font-size: 13px; border-bottom: 2px solid {% if tab == 'purchases' %}#6366f1{% else %}transparent{% endif %}; color: {% if tab == 'purchases' %}#4f46e5{% else %}#64748b{% endif %};">
+    🛒 Procurement (GRN) Purchases
+  </a>
+  <a href="{{ url_for('report_dashboard', tab='sales') }}" 
+     class="tab-link {% if tab == 'sales' %}active{% endif %}"
+     style="padding: 10px 18px; font-weight: 700; font-size: 13px; border-bottom: 2px solid {% if tab == 'sales' %}#6366f1{% else %}transparent{% endif %}; color: {% if tab == 'sales' %}#4f46e5{% else %}#64748b{% endif %};">
+    📦 Outbound Sales Dispatches
+  </a>
+</div>
+
+{% if tab == 'valuation' %}
+  <!-- Valuation Summary KPIs -->
+  <div class="stats-grid" style="margin-bottom: 24px;">
+    <article class="stat-card">
+      <div class="stat-top"><span class="stat-icon violet">▤</span><span class="stat-tag">TOTAL SKUS</span></div>
+      <div class="stat-value">{{ summary.total_skus }}</div>
+      <div class="stat-label">Active Tracked SKUs</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-top"><span class="stat-icon blue">▦</span><span class="stat-tag">STOCK VOLUME</span></div>
+      <div class="stat-value">{{ '{:,}'.format(summary.total_units) }}</div>
+      <div class="stat-label">Total Held Units</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-top"><span class="stat-icon green">₹</span><span class="stat-tag">TOTAL COST VALUATION</span></div>
+      <div class="stat-value">{{ currency_symbol }}{{ '{:,.2f}'.format(summary.total_cost) }}</div>
+      <div class="stat-label">Asset Balance Sheet Cost</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-top"><span class="stat-icon amber">↗</span><span class="stat-tag">POTENTIAL GROSS PROFIT</span></div>
+      <div class="stat-value">{{ currency_symbol }}{{ '{:,.2f}'.format(summary.gross_margin) }}</div>
+      <div class="stat-label">Retail Value: {{ currency_symbol }}{{ '{:,.2f}'.format(summary.total_retail) }}</div>
+    </article>
+  </div>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Inventory Asset Valuation Table</h2>
+        <p>Valuation breakdown per product based on current unit cost versus retail prices</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>PRODUCT NAME</th>
+            <th>SKU</th>
+            <th>CATEGORY</th>
+            <th>TOTAL STOCK</th>
+            <th>UNIT COST</th>
+            <th>RETAIL PRICE</th>
+            <th>TOTAL COST VALUATION</th>
+            <th>TOTAL RETAIL VALUE</th>
+            <th>POTENTIAL MARGIN</th>
+            <th>STATUS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td><strong>{{ r.name }}</strong></td>
+              <td class="mono">{{ r.sku }}</td>
+              <td class="muted-cell">{{ r.category_name or r.category }}</td>
+              <td class="quantity-cell">{{ r.total_stock }} {{ r.unit }}</td>
+              <td class="muted-cell">{{ currency_symbol }}{{ '{:,.2f}'.format(r.cost_price) }}</td>
+              <td class="muted-cell">{{ currency_symbol }}{{ '{:,.2f}'.format(r.selling_price) }}</td>
+              <td><strong>{{ currency_symbol }}{{ '{:,.2f}'.format(r.cost_valuation) }}</strong></td>
+              <td><strong>{{ currency_symbol }}{{ '{:,.2f}'.format(r.retail_valuation) }}</strong></td>
+              <td style="color: #10b981; font-weight: 700;">+{{ currency_symbol }}{{ '{:,.2f}'.format(r.potential_profit) }}</td>
+              <td><span class="status-pill {{ r.status_class }}">{{ r.status }}</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr style="background: #f8fafc; font-weight: 800; border-top: 2px solid #cbd5e1;">
+            <td colspan="3">REPORT TOTALS:</td>
+            <td class="quantity-cell">{{ '{:,}'.format(summary.total_units) }}</td>
+            <td colspan="2"></td>
+            <td>{{ currency_symbol }}{{ '{:,.2f}'.format(summary.total_cost) }}</td>
+            <td>{{ currency_symbol }}{{ '{:,.2f}'.format(summary.total_retail) }}</td>
+            <td style="color: #10b981;">{{ currency_symbol }}{{ '{:,.2f}'.format(summary.gross_margin) }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+{% elif tab == 'movements' %}
+  <section class="panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Movements Audit Log <span class="count-badge">{{ rows|length }}</span></h2>
+        <p>Comprehensive transaction record across all stock points</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>REF #</th>
+            <th>TIMESTAMP</th>
+            <th>TYPE</th>
+            <th>PRODUCT</th>
+            <th>QTY</th>
+            <th>FROM</th>
+            <th>TO</th>
+            <th>PARTY</th>
+            <th>TOTAL VALUE</th>
+            <th>USER</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in rows %}
+            <tr>
+              <td class="mono">{{ m.ref_no }}</td>
+              <td class="muted-cell">{{ m.created_at[:16] }}</td>
+              <td><span class="type-pill {{ m.movement_type|lower }}">{{ m.movement_type }}</span></td>
+              <td><strong>{{ m.product_name }}</strong> <small class="mono">({{ m.sku }})</small></td>
+              <td class="quantity-cell">{{ m.quantity }}</td>
+              <td class="muted-cell">{{ m.from_name or '—' }}</td>
+              <td class="muted-cell">{{ m.to_name or '—' }}</td>
+              <td>{{ m.supplier_name or m.customer_name or '—' }}</td>
+              <td><strong>{{ currency_symbol }}{{ '{:,.2f}'.format(m.total_price or 0.0) }}</strong></td>
+              <td class="muted-cell">{{ m.user_name or 'System' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+{% elif tab == 'purchases' %}
+  <div class="panel" style="margin-bottom: 20px; padding: 18px 24px; background: #f0fdf4; border: 1px solid #bbf7d0;">
+    <div style="font-size: 13px; color: #166534; font-weight: 700;">TOTAL PROCUREMENT EXPENDITURE</div>
+    <div style="font: 800 28px 'Manrope', sans-serif; color: #14532d; margin-top: 4px;">
+      {{ currency_symbol }}{{ '{:,.2f}'.format(total_spent) }}
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Procurement & GRN Receipts <span class="count-badge">{{ rows|length }}</span></h2>
+        <p>Goods received from verified suppliers</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>GRN REF</th>
+            <th>SUPPLIER</th>
+            <th>PRODUCT</th>
+            <th>RECEIVED UNITS</th>
+            <th>UNIT COST</th>
+            <th>TOTAL AMOUNT</th>
+            <th>RECEIVING WAREHOUSE</th>
+            <th>DATE</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in rows %}
+            <tr>
+              <td class="mono"><strong>{{ p.ref_no }}</strong></td>
+              <td><strong>{{ p.supplier_name }}</strong></td>
+              <td>{{ p.product_name }} <small class="mono">({{ p.sku }})</small></td>
+              <td class="quantity-cell">{{ p.quantity }}</td>
+              <td class="muted-cell">{{ currency_symbol }}{{ '{:,.2f}'.format(p.unit_price) }}</td>
+              <td><strong>{{ currency_symbol }}{{ '{:,.2f}'.format(p.total_price) }}</strong></td>
+              <td class="muted-cell">{{ p.warehouse_name }}</td>
+              <td class="muted-cell">{{ p.created_at[:16] }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+{% elif tab == 'sales' %}
+  <div class="panel" style="margin-bottom: 20px; padding: 18px 24px; background: #eff6ff; border: 1px solid #bfdbfe;">
+    <div style="font-size: 13px; color: #1e40af; font-weight: 700;">TOTAL DISPATCH SALES REVENUE</div>
+    <div style="font: 800 28px 'Manrope', sans-serif; color: #1e3a8a; margin-top: 4px;">
+      {{ currency_symbol }}{{ '{:,.2f}'.format(total_revenue) }}
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="panel-heading">
+      <div>
+        <h2>Outbound Dispatch Ledger <span class="count-badge">{{ rows|length }}</span></h2>
+        <p>Customer order fulfillment records</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>DISPATCH REF</th>
+            <th>CUSTOMER / CLIENT</th>
+            <th>PRODUCT</th>
+            <th>DISPATCHED UNITS</th>
+            <th>UNIT SELLING PRICE</th>
+            <th>INVOICE VALUE</th>
+            <th>ORIGIN WAREHOUSE</th>
+            <th>DATE</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in rows %}
+            <tr>
+              <td class="mono"><strong>{{ s.ref_no }}</strong></td>
+              <td><strong>{{ s.customer_name }}</strong></td>
+              <td>{{ s.product_name }} <small class="mono">({{ s.sku }})</small></td>
+              <td class="quantity-cell">{{ s.quantity }}</td>
+              <td class="muted-cell">{{ currency_symbol }}{{ '{:,.2f}'.format(s.unit_price) }}</td>
+              <td><strong>{{ currency_symbol }}{{ '{:,.2f}'.format(s.total_price) }}</strong></td>
+              <td class="muted-cell">{{ s.warehouse_name }}</td>
+              <td class="muted-cell">{{ s.created_at[:16] }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endif %}
+
+<div class="print-signature-block" style="display: none; margin-top: 40px; justify-content: space-between;">
+  <div>
+    <div style="width: 200px; border-top: 1px solid #000; margin-top: 40px; text-align: center; font-size: 11px;">
+      Warehouse Manager Signature
+    </div>
+  </div>
+  <div>
+    <div style="width: 200px; border-top: 1px solid #000; margin-top: 40px; text-align: center; font-size: 11px;">
+      Inventory Auditor Signature
+    </div>
+  </div>
+</div>
+{% endblock %}
