@@ -42,7 +42,7 @@
           <tr>
             <td>
               <div class="product-name-cell">
-                <div class="product-avatar">{{ item.name[:1]|upper }}</div>
+                <div class="product-avatar">{{ (item.name or 'P')[:1]|upper }}</div>
                 <div>
                   <strong>{{ item.name }}</strong>
                   <small>{{ item.unit }}</small>

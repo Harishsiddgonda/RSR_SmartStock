@@ -40,7 +40,7 @@
         {% for l in logs %}
           <tr data-search="{{ (l.username ~ ' ' ~ l.module ~ ' ' ~ l.action ~ ' ' ~ l.details)|lower }}">
             <td class="mono">#{{ l.id }}</td>
-            <td class="muted-cell">{{ l.created_at[:19] }}</td>
+            <td class="muted-cell">{{ (l.created_at or '')[:19] }}</td>
             <td>
               <strong style="color: #4f46e5;">{{ l.username }}</strong>
             </td>

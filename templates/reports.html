@@ -159,7 +159,7 @@
           {% for m in rows %}
             <tr>
               <td class="mono">{{ m.ref_no }}</td>
-              <td class="muted-cell">{{ m.created_at[:16] }}</td>
+              <td class="muted-cell">{{ (m.created_at or '')[:16] }}</td>
               <td><span class="type-pill {{ m.movement_type|lower }}">{{ m.movement_type }}</span></td>
               <td><strong>{{ m.product_name }}</strong> <small class="mono">({{ m.sku }})</small></td>
               <td class="quantity-cell">{{ m.quantity }}</td>
@@ -214,7 +214,7 @@
               <td class="muted-cell">{{ currency_symbol }}{{ '{:,.2f}'.format(p.unit_price) }}</td>
               <td><strong>{{ currency_symbol }}{{ '{:,.2f}'.format(p.total_price) }}</strong></td>
               <td class="muted-cell">{{ p.warehouse_name }}</td>
-              <td class="muted-cell">{{ p.created_at[:16] }}</td>
+              <td class="muted-cell">{{ (p.created_at or '')[:16] }}</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -261,7 +261,7 @@
               <td class="muted-cell">{{ currency_symbol }}{{ '{:,.2f}'.format(s.unit_price) }}</td>
               <td><strong>{{ currency_symbol }}{{ '{:,.2f}'.format(s.total_price) }}</strong></td>
               <td class="muted-cell">{{ s.warehouse_name }}</td>
-              <td class="muted-cell">{{ s.created_at[:16] }}</td>
+              <td class="muted-cell">{{ (s.created_at or '')[:16] }}</td>
             </tr>
           {% endfor %}
         </tbody>

@@ -113,9 +113,9 @@
 
       <div class="sidebar-bottom">
         <div class="sidebar-user">
-          <div class="avatar">{{ current_user.full_name[:1] if current_user else 'U' }}</div>
+          <div class="avatar">{{ (current_user.full_name or current_user.username or 'U')[:1]|upper if current_user else 'U' }}</div>
           <div style="flex: 1; min-width: 0;">
-            <strong>{{ current_user.full_name if current_user else 'Guest User' }}</strong>
+            <strong>{{ current_user.full_name if (current_user and current_user.full_name) else (current_user.username if current_user else 'Guest User') }}</strong>
             <small style="text-transform: uppercase; color: #a5b4fc; font-weight: 700;">{{ current_user.role if current_user else 'Guest' }}</small>
           </div>
           <a href="{{ url_for('logout') }}" title="Sign Out" class="logout-icon-btn" aria-label="Sign out">⎋</a>
@@ -137,7 +137,7 @@
             <i></i> {{ current_user.role|upper if current_user else 'LOCAL' }} WORKSPACE
           </span>
           <a href="{{ url_for('profile') }}" class="top-avatar" title="My Profile ({{ current_user.username if current_user else '' }})">
-            {{ current_user.full_name[:1] if current_user else 'U' }}
+            {{ (current_user.full_name or current_user.username or 'U')[:1]|upper if current_user else 'U' }}
           </a>
           <a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm" style="height: 32px; padding: 0 10px; font-size: 11px;">
             Sign Out

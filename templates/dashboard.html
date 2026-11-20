@@ -139,7 +139,7 @@
       <div class="mini-alert-list">
         {% for item in low_stock %}
           <div class="mini-alert">
-            <div class="product-avatar">{{ item.name[:1]|upper }}</div>
+            <div class="product-avatar">{{ (item.name or 'P')[:1]|upper }}</div>
             <div class="mini-alert-info">
               <strong>{{ item.name }}</strong>
               <small>{{ item.sku }} · {{ item.category_name or 'General' }}</small>
@@ -215,7 +215,7 @@
                 {% endif %}
               </td>
               <td class="muted-cell">{{ item.recorded_by or 'System' }}</td>
-              <td class="muted-cell">{{ item.created_at[:16] }}</td>
+              <td class="muted-cell">{{ (item.created_at or '')[:16] }}</td>
             </tr>
           {% endfor %}
         </tbody>

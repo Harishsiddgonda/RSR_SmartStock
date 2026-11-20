@@ -137,7 +137,7 @@
             <td class="muted-cell">{{ a.warehouse_name or '—' }}</td>
             <td class="remarks-cell">{{ a.remarks }}</td>
             <td class="muted-cell">{{ a.recorded_by or 'System' }}</td>
-            <td class="muted-cell">{{ a.created_at[:16] }}</td>
+            <td class="muted-cell">{{ (a.created_at or '')[:16] }}</td>
           </tr>
         {% else %}
           <tr>

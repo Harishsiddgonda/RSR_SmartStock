@@ -6,16 +6,41 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 from werkzeug.security import generate_password_hash
+from flask import g, has_app_context
 
 BASE_DIR = Path(__file__).resolve().parent
 DATABASE = BASE_DIR / "smartstock.db"
 
 
+def configure_connection(conn: sqlite3.Connection) -> sqlite3.Connection:
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON;")
+    conn.execute("PRAGMA journal_mode = WAL;")
+    conn.execute("PRAGMA busy_timeout = 30000;")
+    return conn
+
+
 def get_db() -> sqlite3.Connection:
-    connection = sqlite3.connect(DATABASE)
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA foreign_keys = ON")
-    return connection
+    """Return database connection. Reuses per-request connection in Flask context, or creates a standalone one."""
+    if has_app_context():
+        if "db" not in g:
+            conn = sqlite3.connect(DATABASE, timeout=30.0)
+            g.db = configure_connection(conn)
+        return g.db
+
+    conn = sqlite3.connect(DATABASE, timeout=30.0)
+    return configure_connection(conn)
+
+
+def close_db(e: Any = None) -> None:
+    """Close request database connection on app context teardown."""
+    if has_app_context():
+        db = g.pop("db", None)
+        if db is not None:
+            try:
+                db.close()
+            except Exception:
+                pass
 
 
 def column_exists(db: sqlite3.Connection, table: str, column: str) -> bool:
@@ -26,7 +51,8 @@ def column_exists(db: sqlite3.Connection, table: str, column: str) -> bool:
 
 def init_db() -> None:
     """Initialize database schema, apply migrations safely without losing data, and seed initial records."""
-    with get_db() as db:
+    db = get_db()
+    try:
         # 1. Users table
         db.execute(
             """
@@ -379,29 +405,58 @@ def init_db() -> None:
                     db.execute(f"UPDATE products SET {', '.join(updates)} WHERE id = ?", params)
 
         db.commit()
+    finally:
+        if not has_app_context():
+            db.close()
 
 
 def get_setting(key: str, default: str = "") -> str:
-    with get_db() as db:
+    db = get_db()
+    try:
         row = db.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
         return row["value"] if row else default
+    finally:
+        if not has_app_context():
+            db.close()
+
+
+def get_all_settings() -> dict[str, str]:
+    """Retrieve all system settings as key-value dictionary in a single query."""
+    db = get_db()
+    try:
+        rows = db.execute("SELECT key, value FROM settings").fetchall()
+        return {r["key"]: r["value"] for r in rows}
+    finally:
+        if not has_app_context():
+            db.close()
 
 
 def update_settings(data: dict[str, str]) -> None:
-    with get_db() as db:
+    db = get_db()
+    try:
         for key, val in data.items():
-            db.execute("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", (key, val))
+            db.execute(
+                "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (key, val),
+            )
         db.commit()
+    finally:
+        if not has_app_context():
+            db.close()
 
 
 def log_activity(user_id: int | None, username: str, action: str, module: str, details: str = "", ip_address: str = "") -> None:
     try:
-        with get_db() as db:
+        db = get_db()
+        try:
             db.execute(
                 """INSERT INTO activity_logs (user_id, username, action, module, details, ip_address)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 (user_id, username or "System", action, module, details, ip_address),
             )
             db.commit()
+        finally:
+            if not has_app_context():
+                db.close()
     except Exception as e:
         print(f"Error logging activity: {e}")

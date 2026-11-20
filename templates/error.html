@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ code }} - {{ title }} · RSR SmartStock</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      background: #0b1120;
+      color: #f8fafc;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      overflow-x: hidden;
+    }
+    .error-bg-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, rgba(15, 23, 42, 0) 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    .error-container {
+      position: relative;
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 48px;
+      max-width: 580px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(16px);
+    }
+    .error-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .error-code {
+      font-family: 'Manrope', sans-serif;
+      font-size: 84px;
+      font-weight: 800;
+      line-height: 1;
+      margin: 0 0 12px 0;
+      background: linear-gradient(135deg, #f8fafc 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .error-title {
+      font-family: 'Manrope', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0 0 16px 0;
+    }
+    .error-description {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #94a3b8;
+      margin: 0 0 32px 0;
+    }
+    .error-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-return {
+      background: linear-gradient(135deg, #4f46e5, #4338ca);
+      color: #ffffff;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+    }
+    .btn-return:hover {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(79, 70, 229, 0.45);
+    }
+    .btn-back {
+      background: rgba(255, 255, 255, 0.07);
+      color: #cbd5e1;
+      padding: 12px 22px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-back:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+    }
+    .error-footer {
+      margin-top: 36px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 12px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="error-bg-glow"></div>
+  <div class="error-container">
+    <div class="error-pill">
+      <span>●</span> Status {{ code }}
+    </div>
+    <div class="error-code">{{ code }}</div>
+    <h1 class="error-title">{{ title }}</h1>
+    <p class="error-description">{{ message }}</p>
+
+    <div class="error-actions">
+      <a href="{{ url_for('dashboard') }}" class="btn-return">
+        <span>▦</span> Return to Dashboard
+      </a>
+      <button onclick="history.back()" type="button" class="btn-back">
+        ← Go Back
+      </button>
+    </div>
+
+    <div class="error-footer">
+      <span>RSR SmartStock Enterprise WMS · Robust & Recoverable</span>
+    </div>
+  </div>
+</body>
+</html>

@@ -2,20 +2,27 @@ from __future__ import annotations
 
 from functools import wraps
 from typing import Any, Callable
-from flask import flash, redirect, request, session, url_for
+from flask import flash, g, has_app_context, redirect, request, session, url_for
 from db import get_db
 
 
 def current_user() -> dict[str, Any] | None:
-    """Return dictionary of currently logged-in user or None."""
+    """Return dictionary of currently logged-in user or None. Caches in Flask request context."""
     user_id = session.get("user_id")
     if not user_id:
         return None
-    with get_db() as db:
-        user = db.execute("SELECT id, username, full_name, email, role, is_active FROM users WHERE id = ?", (user_id,)).fetchone()
-        if user and user["is_active"]:
-            return dict(user)
-    return None
+    if has_app_context() and hasattr(g, "_current_user"):
+        return g._current_user
+
+    db = get_db()
+    user = db.execute(
+        "SELECT id, username, full_name, email, role, is_active FROM users WHERE id = ?",
+        (user_id,),
+    ).fetchone()
+    res = dict(user) if user and user["is_active"] else None
+    if has_app_context():
+        g._current_user = res
+    return res
 
 
 def login_required(f: Callable) -> Callable:

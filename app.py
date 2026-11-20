@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import os
 import sqlite3
+import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -30,6 +31,9 @@ DATABASE_PATH = BASE_DIR / "smartstock.db"
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SMARTSTOCK_SECRET", "rsr-smartstock-enterprise-security-key-2026")
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)  # 30 days persistent session for Remember Me
+
+# Register database connection teardown
+app.teardown_appcontext(database.close_db)
 
 
 def get_db() -> sqlite3.Connection:
@@ -201,14 +205,15 @@ def inventory_rows(category_id: int | None = None, search: str = "") -> list[dic
 @app.context_processor
 def inject_globals():
     user = current_user()
+    settings = database.get_all_settings()
     return {
         "current_user": user,
         "current_year": datetime.now().year,
-        "currency_symbol": database.get_setting("currency_symbol", "₹"),
-        "company_name": database.get_setting("company_name", "RSR SmartStock"),
-        "company_tagline": database.get_setting("company_tagline", "Inventory Clarity. Warehouse Control."),
-        "company_address": database.get_setting("company_address", "Industrial Tech Park, Bengaluru"),
-        "tax_number": database.get_setting("tax_number", "GSTIN29AAACR1234F1Z5"),
+        "currency_symbol": settings.get("currency_symbol", "₹"),
+        "company_name": settings.get("company_name", "RSR SmartStock"),
+        "company_tagline": settings.get("company_tagline", "Inventory Clarity. Warehouse Control."),
+        "company_address": settings.get("company_address", "Industrial Tech Park, Bengaluru"),
+        "tax_number": settings.get("tax_number", "GSTIN29AAACR1234F1Z5"),
     }
 
 
@@ -1662,6 +1667,42 @@ def chart_data():
 @app.route("/favicon.ico")
 def favicon():
     return "", 204
+
+
+# -------------------------------------------------------------
+# Global Error Handlers (Prevents unhandled 500 white screen)
+# -------------------------------------------------------------
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template(
+        "error.html",
+        code=404,
+        title="Page Not Found",
+        message="The page or record you requested could not be located in RSR SmartStock.",
+    ), 404
+
+
+@app.errorhandler(403)
+def access_forbidden(e):
+    return render_template(
+        "error.html",
+        code=403,
+        title="Access Forbidden",
+        message="You do not have administrative permission to view or modify this resource.",
+    ), 403
+
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    tb = traceback.format_exc()
+    app.logger.error(f"Internal Server Error encountered: {e}\n{tb}")
+    print(f"[ERROR 500] {e}\n{tb}")
+    return render_template(
+        "error.html",
+        code=500,
+        title="System Error Recovered",
+        message="An unexpected error occurred during this request. The system has safely logged the diagnostic details. Please return to the dashboard or try your action again.",
+    ), 500
 
 
 # -------------------------------------------------------------

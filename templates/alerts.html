@@ -51,7 +51,7 @@
           <tr>
             <td>
               <div class="product-name-cell">
-                <div class="product-avatar" style="background: #fef2f2; color: #dc2626;">{{ row.name[:1]|upper }}</div>
+                <div class="product-avatar" style="background: #fef2f2; color: #dc2626;">{{ (row.name or 'P')[:1]|upper }}</div>
                 <div>
                   <strong>{{ row.name }}</strong>
                   <small>{{ row.unit }}</small>

@@ -243,10 +243,10 @@
               data-status="{% if row.total_stock == 0 %}out{% elif row.total_stock <= row.reorder_level %}low{% else %}healthy{% endif %}">
             <td>
               <div class="product-name-cell">
-                <div class="product-avatar">{{ row.name[:1]|upper }}</div>
+                <div class="product-avatar">{{ (row.name or 'P')[:1]|upper }}</div>
                 <div>
                   <strong>{{ row.name }}</strong>
-                  <small>{{ row.unit }} {% if row.description %}· {{ row.description[:35] }}{% if row.description|length > 35 %}...{% endif %}{% endif %}</small>
+                  <small>{{ row.unit }} {% if row.description %}· {{ (row.description or '')[:35] }}{% if (row.description or '')|length > 35 %}...{% endif %}{% endif %}</small>
                 </div>
               </div>
             </td>

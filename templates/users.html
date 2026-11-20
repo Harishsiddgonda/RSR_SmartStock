@@ -103,7 +103,7 @@
             <td>
               <div style="display: flex; align-items: center; gap: 9px;">
                 <div class="avatar" style="width: 28px; height: 28px; font-size: 11px;">
-                  {{ u.full_name[:1]|upper }}
+                  {{ (u.full_name or u.username or 'U')[:1]|upper }}
                 </div>
                 <div>
                   <strong class="mono" style="font-size: 12px; color: #1e293b;">{{ u.username }}</strong>
@@ -111,7 +111,7 @@
                 </div>
               </div>
             </td>
-            <td><strong>{{ u.full_name }}</strong></td>
+            <td><strong>{{ u.full_name or u.username }}</strong></td>
             <td>
               <span class="role-badge role-{{ u.role }}">
                 {{ u.role|upper }}
@@ -124,8 +124,8 @@
                 <span class="status-pill status-out"><i></i> Deactivated</span>
               {% endif %}
             </td>
-            <td class="muted-cell">{{ u.created_at[:10] }}</td>
-            <td class="muted-cell">{{ u.last_login[:16] if u.last_login else 'Never' }}</td>
+            <td class="muted-cell">{{ (u.created_at or '')[:10] }}</td>
+            <td class="muted-cell">{{ (u.last_login or '')[:16] if u.last_login else 'Never' }}</td>
             <td>
               <div style="display: flex; gap: 8px;">
                 <button type="button" class="btn btn-secondary btn-xs" onclick="openResetModal({{ u.id }}, '{{ u.username }}')">

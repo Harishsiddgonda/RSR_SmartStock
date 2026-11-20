@@ -92,7 +92,7 @@
               <strong>{{ currency_symbol }}{{ '{:,.2f}'.format(row.total_price or 0.0) }}</strong>
             </td>
             <td class="muted-cell">{{ row.recorded_by or 'System' }}</td>
-            <td class="muted-cell">{{ row.created_at[:16] }}</td>
+            <td class="muted-cell">{{ (row.created_at or '')[:16] }}</td>
             <td class="remarks-cell" title="{{ row.remarks }}">{{ row.remarks or '—' }}</td>
           </tr>
         {% else %}
