@@ -254,19 +254,27 @@ def init_db() -> None:
         for key, val in default_settings:
             db.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (key, val))
 
-        # Seed default users (Admin, Manager, Staff)
-        user_count = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-        if user_count == 0:
-            users = [
-                ("admin", generate_password_hash("admin123"), "System Administrator", "admin@rsrsmartstock.local", "admin"),
-                ("manager", generate_password_hash("manager123"), "Warehouse Manager", "manager@rsrsmartstock.local", "manager"),
-                ("staff", generate_password_hash("staff123"), "Operations Staff", "staff@rsrsmartstock.local", "staff"),
-            ]
-            db.executemany(
-                """INSERT INTO users (username, password_hash, full_name, email, role)
-                   VALUES (?, ?, ?, ?, ?)""",
-                users,
-            )
+        # Seed default users (Super Admin Harish, Admin, Manager, Staff)
+        seed_users = [
+            ("harish", "harish123", "Harish (Super Admin)", "harish@rsrsmartstock.com", "admin"),
+            ("admin", "admin123", "System Administrator", "admin@rsrsmartstock.local", "admin"),
+            ("manager", "manager123", "Warehouse Manager", "manager@rsrsmartstock.local", "manager"),
+            ("staff", "staff123", "Operations Staff", "staff@rsrsmartstock.local", "staff"),
+        ]
+        for uname, pwd, fname, email, role in seed_users:
+            existing = db.execute("SELECT id FROM users WHERE lower(username) = lower(?)", (uname,)).fetchone()
+            if not existing:
+                db.execute(
+                    """INSERT INTO users (username, password_hash, full_name, email, role, is_active)
+                       VALUES (?, ?, ?, ?, ?, 1)""",
+                    (uname, generate_password_hash(pwd), fname, email, role),
+                )
+            else:
+                # Ensure account is active and password hash is valid
+                db.execute(
+                    "UPDATE users SET is_active = 1, password_hash = ? WHERE id = ?",
+                    (generate_password_hash(pwd), existing["id"]),
+                )
 
         # Seed default categories
         cat_count = db.execute("SELECT COUNT(*) FROM categories").fetchone()[0]

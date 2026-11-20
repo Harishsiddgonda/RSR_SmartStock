@@ -82,7 +82,7 @@
 
 <div class="warehouse-cards" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; margin-bottom: 24px;">
   {% for wh in warehouses %}
-    {% set occupancy_pct = (wh.total_units / (wh.capacity or 10000) * 100)|round(1) %}
+    {% set occupancy_pct = (((wh.total_units or 0) / (wh.capacity or 10000)) * 100)|round(1) %}
     {% if occupancy_pct > 100 %}{% set occupancy_pct = 100 %}{% endif %}
     <article class="warehouse-card">
       <div class="warehouse-card-top">
@@ -110,7 +110,7 @@
 
       <div class="warehouse-metrics">
         <div>
-          <strong>{{ '{:,}'.format(wh.total_units) }}</strong>
+          <strong>{{ '{:,}'.format(wh.total_units or 0) }}</strong>
           <small>Stored Units</small>
         </div>
         <div>

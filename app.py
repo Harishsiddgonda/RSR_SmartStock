@@ -335,25 +335,39 @@ def profile():
 @login_required
 def dashboard():
     with get_db() as db:
-        stats = db.execute(
+        stats_row = db.execute(
             """SELECT
                 COUNT(DISTINCT p.id) AS sku_count,
                 COALESCE(SUM(s.quantity), 0) AS total_units,
                 COALESCE(SUM(s.quantity * p.cost_price), 0.0) AS total_cost_value,
                 COALESCE(SUM(s.quantity * p.selling_price), 0.0) AS total_retail_value,
                 (SELECT COUNT(*) FROM movements WHERE date(created_at) = date('now', 'localtime')) AS today_moves,
-                (SELECT COUNT(DISTINCT p2.id)
-                 FROM products p2 LEFT JOIN stock s2 ON s2.product_id = p2.id
-                 WHERE p2.is_active = 1
-                 GROUP BY p2.id HAVING COALESCE(SUM(s2.quantity), 0) <= p2.reorder_level) AS low_stock_count,
-                (SELECT COUNT(DISTINCT p3.id)
-                 FROM products p3 LEFT JOIN stock s3 ON s3.product_id = p3.id
-                 WHERE p3.is_active = 1
-                 GROUP BY p3.id HAVING COALESCE(SUM(s3.quantity), 0) = 0) AS out_of_stock_count
+                (SELECT COUNT(*) FROM (
+                    SELECT p2.id FROM products p2
+                    LEFT JOIN stock s2 ON s2.product_id = p2.id
+                    WHERE p2.is_active = 1
+                    GROUP BY p2.id HAVING COALESCE(SUM(s2.quantity), 0) <= p2.reorder_level
+                )) AS low_stock_count,
+                (SELECT COUNT(*) FROM (
+                    SELECT p3.id FROM products p3
+                    LEFT JOIN stock s3 ON s3.product_id = p3.id
+                    WHERE p3.is_active = 1
+                    GROUP BY p3.id HAVING COALESCE(SUM(s3.quantity), 0) = 0
+                )) AS out_of_stock_count
                FROM products p
                LEFT JOIN stock s ON s.product_id = p.id
                WHERE p.is_active = 1"""
         ).fetchone()
+
+        stats = {
+            "sku_count": (stats_row["sku_count"] or 0) if stats_row else 0,
+            "total_units": (stats_row["total_units"] or 0) if stats_row else 0,
+            "total_cost_value": (stats_row["total_cost_value"] or 0.0) if stats_row else 0.0,
+            "total_retail_value": (stats_row["total_retail_value"] or 0.0) if stats_row else 0.0,
+            "today_moves": (stats_row["today_moves"] or 0) if stats_row else 0,
+            "low_stock_count": (stats_row["low_stock_count"] or 0) if stats_row else 0,
+            "out_of_stock_count": (stats_row["out_of_stock_count"] or 0) if stats_row else 0,
+        }
 
         low_stock = db.execute(
             """SELECT p.id, p.sku, p.name, p.reorder_level, p.unit,

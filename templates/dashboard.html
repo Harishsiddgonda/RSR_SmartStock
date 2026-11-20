@@ -6,7 +6,7 @@
 <div class="page-heading">
   <div>
     <div class="eyebrow">ENTERPRISE WMS · LIVE OPERATIONS OVERVIEW</div>
-    <h1>Welcome back, {{ current_user.full_name }} <span class="wave">✦</span></h1>
+    <h1>Welcome back, {{ (current_user.full_name or current_user.username or 'Admin') if current_user else 'Admin' }} <span class="wave">✦</span></h1>
     <p>Live inventory status, warehouse occupancy, financial valuation, and activity metrics.</p>
   </div>
   <div class="heading-actions">
@@ -22,7 +22,7 @@
       <span class="stat-icon violet">▤</span>
       <span class="stat-tag">CATALOGUE</span>
     </div>
-    <div class="stat-value">{{ stats.sku_count }}</div>
+    <div class="stat-value">{{ (stats.sku_count or 0) if stats else 0 }}</div>
     <div class="stat-label">Total Active SKUs</div>
     <div class="stat-foot">In {{ category_distribution|length }} categories</div>
   </article>
@@ -32,7 +32,7 @@
       <span class="stat-icon blue">▦</span>
       <span class="stat-tag">PHYSICAL STOCK</span>
     </div>
-    <div class="stat-value">{{ '{:,}'.format(stats.total_units) }}</div>
+    <div class="stat-value">{{ '{:,}'.format((stats.total_units or 0) if stats else 0) }}</div>
     <div class="stat-label">Total Stock Units</div>
     <div class="stat-foot">Distributed in {{ warehouse_totals|length }} warehouses</div>
   </article>
@@ -42,19 +42,19 @@
       <span class="stat-icon green">₹</span>
       <span class="stat-tag">VALUATION (COST)</span>
     </div>
-    <div class="stat-value">{{ currency_symbol }}{{ '{:,.2f}'.format(stats.total_cost_value) }}</div>
+    <div class="stat-value">{{ currency_symbol }}{{ '{:,.2f}'.format((stats.total_cost_value or 0.0) if stats else 0.0) }}</div>
     <div class="stat-label">Asset Valuation</div>
-    <div class="stat-foot">Retail Value: {{ currency_symbol }}{{ '{:,.2f}'.format(stats.total_retail_value) }}</div>
+    <div class="stat-foot">Retail Value: {{ currency_symbol }}{{ '{:,.2f}'.format((stats.total_retail_value or 0.0) if stats else 0.0) }}</div>
   </article>
 
   <article class="stat-card">
     <div class="stat-top">
-      <span class="stat-icon {% if stats.low_stock_count > 0 %}amber{% else %}green{% endif %}">⚑</span>
+      <span class="stat-icon {% if stats and (stats.low_stock_count or 0) > 0 %}amber{% else %}green{% endif %}">⚑</span>
       <span class="stat-tag">ALERTS</span>
     </div>
-    <div class="stat-value">{{ stats.low_stock_count }}</div>
+    <div class="stat-value">{{ (stats.low_stock_count or 0) if stats else 0 }}</div>
     <div class="stat-label">Low Stock SKUs</div>
-    <div class="stat-foot">{{ stats.out_of_stock_count }} item(s) currently out of stock</div>
+    <div class="stat-foot">{{ (stats.out_of_stock_count or 0) if stats else 0 }} item(s) currently out of stock</div>
   </article>
 </div>
 
